@@ -3,7 +3,6 @@
 #include <d2d1.h>
 #include <dwrite.h>
 #include <thread>
-#include <mutex>
 #include <atomic>
 
 class OverlayWindow {
@@ -13,16 +12,18 @@ public:
 
     bool Create(HWND hTarget);
     void Destroy();
+    void Invalidate();
+    void SetClickThrough(bool enabled);
+
+private:
     void Run();
     void UpdatePosition();
     void OnPaint();
-    void Invalidate() { if (m_hWnd) InvalidateRect(m_hWnd, NULL, FALSE); }
+    void DrawMenu(ID2D1RenderTarget* rt);
+    void DrawToggle(ID2D1RenderTarget* rt, float x, float y, const wchar_t* label, bool enabled);
 
-    ID2D1HwndRenderTarget* GetRT() { return m_pRenderTarget; }
-    ID2D1SolidColorBrush* GetBrush() { return m_pBrush; }
-    IDWriteTextFormat* GetTextFormat() { return m_pTextFormat; }
+    static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-private:
     HWND m_hWnd;
     HWND m_hTargetWnd;
     ID2D1Factory* m_pD2DFactory;
@@ -30,9 +31,7 @@ private:
     ID2D1SolidColorBrush* m_pBrush;
     IDWriteFactory* m_pDWriteFactory;
     IDWriteTextFormat* m_pTextFormat;
-
+    
     std::thread m_renderThread;
     std::atomic<bool> m_running;
-
-    static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 };

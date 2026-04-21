@@ -2,7 +2,7 @@
 #include "JVMHelper.h"
 #include "MinecraftOffsets.h"
 
-CheatCore::CheatCore() : m_overlay(nullptr), m_esp(nullptr), m_aimbot(nullptr), m_cache(nullptr), m_running(false), m_env(nullptr), m_minecraftClient(nullptr), m_localPlayer(nullptr), m_world(nullptr) {}
+CheatCore::CheatCore() : m_overlay(nullptr), m_esp(nullptr), m_aimbot(nullptr), m_cache(nullptr), m_running(false), m_menuVisible(false), m_env(nullptr), m_minecraftClient(nullptr), m_localPlayer(nullptr), m_world(nullptr) {}
 
 CheatCore::~CheatCore() { Shutdown(); }
 
@@ -32,24 +32,47 @@ bool CheatCore::Initialize(HWND hGameWnd) {
     return true;
 }
 
+void CheatCore::HandleInput() {
+    // Detectar pulsación de INSERT para el Menú
+    bool insertIsDown = GetAsyncKeyState(VK_INSERT) & 0x8000;
+    if (insertIsDown && !m_insertWasDown) {
+        m_menuVisible = !m_menuVisible;
+        
+        // Cuando el menú está visible, el overlay debe capturar clicks o ser ignorado según el diseño.
+        // Aquí ajustamos la ventana para que sea transparente o no.
+        if (m_overlay) m_overlay->SetClickThrough(!m_menuVisible);
+    }
+    m_insertWasDown = insertIsDown;
+
+    // Teclas rápidas para módulos
+    if (GetAsyncKeyState(VK_F6) & 0x8000) m_aimbotEnabled = !m_aimbotEnabled;
+    if (GetAsyncKeyState(VK_F7) & 0x8000) m_espEnabled = !m_espEnabled;
+}
+
 void CheatCore::Run() {
     RunFrame();
 }
 
 void CheatCore::RunFrame() {
     if (!m_running) return;
+    
+    HandleInput();
+
     JNIEnv* env = JVMHelper::GetEnv();
     if (!env) return;
 
     m_cache->Update(env, m_world, m_localPlayer);
-    m_aimbot->Run(*m_cache, env, m_localPlayer);
+    
+    if (m_aimbotEnabled) {
+        m_aimbot->Run(*m_cache, env, m_localPlayer);
+    }
 
     m_overlay->Invalidate();
 }
 
 void CheatCore::DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_esp && m_cache) {
+    if (m_espEnabled && m_esp && m_cache) {
         ESPRenderer::Draw(rt, brush, textFormat, *m_cache);
     }
 }
