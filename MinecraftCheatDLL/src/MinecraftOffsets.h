@@ -1,19 +1,15 @@
 #pragma once
 #include <jni.h>
 
-/**
- * Offsets y nombres ofuscados para Minecraft 1.21.4 Release (Vanilla).
- * Estos nombres son los reales encontrados en el binario del juego.
- */
-namespace Offsets {
-    // Clases (Estructura interna de Mojang)
+namespace MinecraftOffsets {
+    // Clases
     inline const char* CLASS_MINECRAFT = "net/minecraft/client/Minecraft";
     inline const char* CLASS_PLAYER = "net/minecraft/client/player/LocalPlayer";
     inline const char* CLASS_WORLD = "net/minecraft/client/multiplayer/ClientLevel";
     inline const char* CLASS_ENTITY = "net/minecraft/world/entity/Entity";
     inline const char* CLASS_LIVING = "net/minecraft/world/entity/LivingEntity";
     
-    // Campos ofuscados 1.21.4
+    // Campos
     inline const char* FIELD_MINECRAFT_INSTANCE = "instance";
     inline const char* FIELD_PLAYER = "player";
     inline const char* FIELD_LEVEL = "level";
@@ -24,9 +20,17 @@ namespace Offsets {
     inline const char* FIELD_PITCH = "xRot";
     inline const char* FIELD_HEALTH = "health";
     
-    // Métodos de acceso
+    // Métodos
     inline const char* METHOD_GET_INSTANCE = "getInstance";
     inline const char* METHOD_GET_ENTITIES = "entitiesForRendering";
+
+    // IDs Globales
+    extern jfieldID g_YawFieldID;
+    extern jfieldID g_PitchFieldID;
+    extern jfieldID g_PosXFieldID;
+    extern jfieldID g_PosYFieldID;
+    extern jfieldID g_PosZFieldID;
+    extern jfieldID g_HealthFieldID;
 
     bool Initialize(JNIEnv* env);
 }

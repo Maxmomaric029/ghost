@@ -1,4 +1,5 @@
 #include "JVMHelper.h"
+#include "MinecraftOffsets.h"
 #include <iostream>
 
 namespace JVMHelper {
@@ -74,8 +75,27 @@ namespace JVMHelper {
     }
 
     jmethodID GetMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig) {
-        // Implementación similar con caché para métodos
         return env->GetMethodID(clazz, name, sig);
+    }
+
+    jobject GetMinecraftClient(JNIEnv* env) {
+        jclass clientClass = GetClass(env, Offsets::CLASS_MINECRAFT);
+        if (!clientClass) return nullptr;
+        jmethodID getInstance = env->GetStaticMethodID(clientClass, Offsets::METHOD_GET_INSTANCE, "()L" "net/minecraft/client/Minecraft" ";");
+        if (!getInstance) return nullptr;
+        return env->CallStaticObjectMethod(clientClass, getInstance);
+    }
+
+    jobject GetLocalPlayer(JNIEnv* env, jobject client) {
+        jclass clientClass = GetClass(env, Offsets::CLASS_MINECRAFT);
+        jfieldID playerField = GetField(env, clientClass, Offsets::FIELD_PLAYER, "L" "net/minecraft/client/player/LocalPlayer" ";");
+        return env->GetObjectField(client, playerField);
+    }
+
+    jobject GetWorld(JNIEnv* env, jobject client) {
+        jclass clientClass = GetClass(env, Offsets::CLASS_MINECRAFT);
+        jfieldID worldField = GetField(env, clientClass, Offsets::FIELD_LEVEL, "L" "net/minecraft/client/multiplayer/ClientLevel" ";");
+        return env->GetObjectField(client, worldField);
     }
 
     void ExceptionCheck(JNIEnv* env) {

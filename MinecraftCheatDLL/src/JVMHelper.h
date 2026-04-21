@@ -54,6 +54,13 @@ namespace JVMHelper {
     jmethodID GetMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig);
 
     /**
+     * Helper para obtener instancias clave de Minecraft.
+     */
+    jobject GetMinecraftClient(JNIEnv* env);
+    jobject GetLocalPlayer(JNIEnv* env, jobject client);
+    jobject GetWorld(JNIEnv* env, jobject client);
+
+    /**
      * Verifica y limpia excepciones de Java para evitar crashes.
      */
     void ExceptionCheck(JNIEnv* env);

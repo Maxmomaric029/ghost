@@ -6,18 +6,20 @@ CheatCore::CheatCore() : m_overlay(nullptr), m_esp(nullptr), m_aimbot(nullptr), 
 
 CheatCore::~CheatCore() { Shutdown(); }
 
-bool CheatCore::Initialize(JNIEnv* env, HWND hGameWnd) {
-    m_env = env;
-    if (!MinecraftOffsets::Initialize(env)) {
+bool CheatCore::Initialize(HWND hGameWnd) {
+    m_env = JVMHelper::GetEnv();
+    if (!m_env) return false;
+
+    if (!Offsets::Initialize(m_env)) {
         OutputDebugStringA("[CheatCore] Fallo al inicializar offsets.");
         return false;
     }
 
-    m_minecraftClient = env->NewGlobalRef(JVMHelper::GetMinecraftClient(env));
+    m_minecraftClient = m_env->NewGlobalRef(JVMHelper::GetMinecraftClient(m_env));
     if (!m_minecraftClient) return false;
 
-    m_localPlayer = env->NewGlobalRef(JVMHelper::GetLocalPlayer(env, m_minecraftClient));
-    m_world = env->NewGlobalRef(JVMHelper::GetWorld(env, m_minecraftClient));
+    m_localPlayer = m_env->NewGlobalRef(JVMHelper::GetLocalPlayer(m_env, m_minecraftClient));
+    m_world = m_env->NewGlobalRef(JVMHelper::GetWorld(m_env, m_minecraftClient));
 
     m_cache = new EntityCache();
     m_aimbot = new Aimbot();
@@ -30,17 +32,17 @@ bool CheatCore::Initialize(JNIEnv* env, HWND hGameWnd) {
     return true;
 }
 
+void CheatCore::Run() {
+    RunFrame();
+}
+
 void CheatCore::RunFrame() {
     if (!m_running) return;
-    JNIEnv* env = JVMHelper::AttachThreadToJVM();
+    JNIEnv* env = JVMHelper::GetEnv();
     if (!env) return;
 
     m_cache->Update(env, m_world, m_localPlayer);
     m_aimbot->Run(*m_cache, env, m_localPlayer);
-
-    if (GetAsyncKeyState(VK_INSERT) & 1) {
-        // Toggle menu logic
-    }
 
     m_overlay->Invalidate();
 }
@@ -48,7 +50,6 @@ void CheatCore::RunFrame() {
 void CheatCore::DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_esp && m_cache) {
-        // In a real implementation, view matrices are passed here
         ESPRenderer::Draw(rt, brush, textFormat, *m_cache);
     }
 }
@@ -57,7 +58,7 @@ void CheatCore::Shutdown() {
     m_running = false;
     if (m_overlay) { m_overlay->Destroy(); delete m_overlay; m_overlay = nullptr; }
     
-    JNIEnv* env = JVMHelper::AttachThreadToJVM();
+    JNIEnv* env = JVMHelper::GetEnv();
     if (env) {
         if (m_minecraftClient) env->DeleteGlobalRef(m_minecraftClient);
         if (m_localPlayer) env->DeleteGlobalRef(m_localPlayer);

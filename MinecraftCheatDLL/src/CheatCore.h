@@ -11,7 +11,8 @@ class CheatCore {
 public:
     static CheatCore& Instance() { static CheatCore inst; return inst; }
 
-    bool Initialize(JNIEnv* env, HWND hGameWnd);
+    bool Initialize(HWND hGameWnd);
+    void Run();
     void RunFrame();
     void Shutdown();
     void DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat);
