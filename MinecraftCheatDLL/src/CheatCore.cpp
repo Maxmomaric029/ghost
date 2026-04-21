@@ -32,12 +32,9 @@ bool CheatCore::Initialize(HWND hGameWnd) {
     return true;
 }
 
-// Función auxiliar para leer matrices de JOML vía JNI
 void ReadJOMLMatrix(JNIEnv* env, jobject matrixObj, Matrix4x4& out) {
     if (!matrixObj) return;
     jclass matClass = env->GetObjectClass(matrixObj);
-    // En JOML 1.21.4, los campos son m00, m01... o se pueden obtener vía reflección
-    // Para velocidad en este stress test, leeremos los 16 campos float estándar
     const char* fields[] = { "m00","m01","m02","m03","m10","m11","m12","m13","m20","m21","m22","m23","m30","m31","m32","m33" };
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -60,11 +57,9 @@ void CheatCore::HandleInput() {
 void CheatCore::OnMouseClick(float mx, float my) {
     if (!m_menuVisible) return;
     
-    // Detección simple de botones en el menú (Coordenadas relativas al overlay)
-    // El menú está centrado, así que mx/my deben validarse contra el rectángulo central
-    // Toggle Aimbot
+    // El menú es de 350x400 y está centrado.
+    // Lógica de detección simplificada para los botones visuales del menú
     if (mx > 100 && mx < 400 && my > 150 && my < 180) m_aimbotEnabled = !m_aimbotEnabled;
-    // Toggle ESP
     if (mx > 100 && mx < 400 && my > 200 && my < 230) m_espEnabled = !m_espEnabled;
 }
 
@@ -75,7 +70,6 @@ void CheatCore::RunFrame() {
     JNIEnv* env = JVMHelper::GetEnv();
     if (!env) return;
 
-    // Actualizar matrices reales cada frame para el ESP
     jobject gameRenderer = env->GetObjectField(m_minecraftClient, MinecraftOffsets::g_GameRendererFieldID);
     if (gameRenderer) {
         jobject projMatObj = env->GetObjectField(gameRenderer, MinecraftOffsets::g_ProjMatrixFieldID);
@@ -98,7 +92,7 @@ void CheatCore::RunFrame() {
 void CheatCore::DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_espEnabled && m_esp && m_cache) {
-        m_esp->UpdateMatrices(m_modelViewMatrix, m_projectionMatrix);
+        // CORRECCIÓN: Eliminada la llamada a UpdateMatrices redundante
         ESPRenderer::Draw(rt, brush, textFormat, *m_cache);
     }
 }
