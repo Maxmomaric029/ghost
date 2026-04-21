@@ -1,23 +1,27 @@
 #pragma once
-#include <vector>
 #include <jni.h>
-#include "MinecraftOffsets.h"
+#include <vector>
+#include <mutex>
+#include "Utils.h"
 
 struct CachedEntity {
-    Vector3 position;
-    Vector3 headPosition;
-    float health;
-    float maxHealth;
-    bool isEnemy;
     jobject entityRef;
+    Vector3 position;
+    Vector3 headPos;
+    float health;
+    bool isEnemy;
+    bool isValid;
 };
 
 class EntityCache {
 public:
+    EntityCache();
+    ~EntityCache();
+
     void Update(JNIEnv* env, jobject world, jobject localPlayer);
-    const std::vector<CachedEntity>& GetEntities() const { return m_entities; }
-    void Clear(JNIEnv* env);
+    std::vector<CachedEntity> GetEntities();
 
 private:
     std::vector<CachedEntity> m_entities;
+    std::mutex m_mutex;
 };

@@ -51,6 +51,7 @@
     <ClCompile Include="src\ESPRenderer.cpp" />
     <ClCompile Include="src\Aimbot.cpp" />
     <ClCompile Include="src\EntityCache.cpp" />
+    <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\CheatCore.h" />
@@ -60,6 +61,7 @@
     <ClInclude Include="src\ESPRenderer.h" />
     <ClInclude Include="src\Aimbot.h" />
     <ClInclude Include="src\EntityCache.h" />
+    <ClInclude Include="src\Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

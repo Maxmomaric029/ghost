@@ -1,8 +1,8 @@
 #pragma once
 #include <windows.h>
 #include <jni.h>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 #include <mutex>
 
 class JVMHelper {
@@ -18,6 +18,10 @@ public:
     static jfieldID GetFieldIDCached(JNIEnv* env, jclass clazz, const char* name, const char* sig);
     static jmethodID GetMethodIDCached(JNIEnv* env, jclass clazz, const char* name, const char* sig);
     static jmethodID GetStaticMethodIDCached(JNIEnv* env, jclass clazz, const char* name, const char* sig);
+
+    static jobject GetMinecraftClient(JNIEnv* env);
+    static jobject GetLocalPlayer(JNIEnv* env, jobject client);
+    static jobject GetWorld(JNIEnv* env, jobject client);
 
     static bool CheckException(JNIEnv* env);
 

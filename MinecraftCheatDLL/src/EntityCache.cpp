@@ -1,11 +1,13 @@
 #include "EntityCache.h"
 #include "JVMHelper.h"
+#include "MinecraftOffsets.h"
+
+EntityCache::EntityCache() {}
+EntityCache::~EntityCache() {}
 
 void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
-    Clear(env);
-
-    jclass worldClass = JVMHelper::FindClassCached(env, "net/minecraft/class_638");
-    jmethodID getEntities = JVMHelper::GetMethodIDCached(env, worldClass, "method_18112", "()Ljava/lang/Iterable;");
+    jclass worldClass = JVMHelper::FindClassCached(env, MC_CLASS_WORLD);
+    jmethodID getEntities = JVMHelper::GetMethodIDCached(env, worldClass, MC_METHOD_GETENTITIES, "()Ljava/lang/Iterable;");
     jobject iterable = env->CallObjectMethod(world, getEntities);
 
     jclass iterableClass = env->FindClass("java/lang/Iterable");
@@ -16,11 +18,7 @@ void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
     jmethodID hasNextMid = env->GetMethodID(iteratorClass, "hasNext", "()Z");
     jmethodID nextMid = env->GetMethodID(iteratorClass, "next", "()Ljava/lang/Object;");
 
-    jclass entityClass = JVMHelper::FindClassCached(env, Offsets::ENTITY_CLASS);
-    jfieldID xFid = env->GetFieldID(entityClass, Offsets::POS_X_FIELD, "D");
-    jfieldID yFid = env->GetFieldID(entityClass, Offsets::POS_Y_FIELD, "D");
-    jfieldID zFid = env->GetFieldID(entityClass, Offsets::POS_Z_FIELD, "D");
-
+    std::vector<CachedEntity> temp;
     while (env->CallBooleanMethod(iterator, hasNextMid)) {
         jobject entity = env->CallObjectMethod(iterator, nextMid);
         if (env->IsSameObject(entity, localPlayer)) {
@@ -29,27 +27,30 @@ void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
         }
 
         CachedEntity ce;
-        ce.position.x = env->GetDoubleField(entity, xFid);
-        ce.position.y = env->GetDoubleField(entity, yFid);
-        ce.position.z = env->GetDoubleField(entity, zFid);
-        ce.headPosition = { ce.position.x, ce.position.y + 1.8, ce.position.z };
-        
-        // Health and other fields would be read here
-        ce.health = 20.0f; 
-        ce.isEnemy = true;
+        ce.position.x = env->GetDoubleField(entity, MinecraftOffsets::g_PosXFieldID);
+        ce.position.y = env->GetDoubleField(entity, MinecraftOffsets::g_PosYFieldID);
+        ce.position.z = env->GetDoubleField(entity, MinecraftOffsets::g_PosZFieldID);
+        ce.headPos = { ce.position.x, ce.position.y + 1.8, ce.position.z };
+        ce.health = env->GetFloatField(entity, MinecraftOffsets::g_HealthFieldID);
+        ce.isEnemy = true; // Placeholder for team check logic
+        ce.isValid = true;
         ce.entityRef = env->NewGlobalRef(entity);
 
-        m_entities.push_back(ce);
+        temp.push_back(ce);
         env->DeleteLocalRef(entity);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto& old : m_entities) env->DeleteGlobalRef(old.entityRef);
+        m_entities = temp;
     }
 
     env->DeleteLocalRef(iterator);
     env->DeleteLocalRef(iterable);
 }
 
-void EntityCache::Clear(JNIEnv* env) {
-    for (auto& ce : m_entities) {
-        env->DeleteGlobalRef(ce.entityRef);
-    }
-    m_entities.clear();
+std::vector<CachedEntity> EntityCache::GetEntities() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_entities;
 }

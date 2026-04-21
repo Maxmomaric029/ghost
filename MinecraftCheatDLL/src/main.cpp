@@ -1,6 +1,6 @@
 #include <windows.h>
-#include <iostream>
 #include "CheatCore.h"
+#include "JVMHelper.h"
 
 DWORD WINAPI CheatThread(LPVOID lpParam) {
     HMODULE hMod = (HMODULE)lpParam;
@@ -10,15 +10,21 @@ DWORD WINAPI CheatThread(LPVOID lpParam) {
     }
 
     __try {
-        if (CheatCore::Instance().Initialize()) {
-            while (CheatCore::Instance().IsActive()) {
-                CheatCore::Instance().RunFrame();
-                Sleep(16);
+        if (JVMHelper::Initialize()) {
+            JNIEnv* env = JVMHelper::AttachThreadToJVM();
+            if (env) {
+                HWND mcWnd = FindWindowW(L"GLFW30", L"Minecraft 1.21.4");
+                if (mcWnd && CheatCore::Instance().Initialize(env, mcWnd)) {
+                    while (CheatCore::Instance().IsRunning()) {
+                        CheatCore::Instance().RunFrame();
+                        Sleep(16);
+                    }
+                }
             }
         }
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
-        // Log crash or handle
+        OutputDebugStringA("[GhostClient] Excepción fatal en el hilo principal.");
     }
 
     CheatCore::Instance().Shutdown();

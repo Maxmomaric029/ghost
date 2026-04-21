@@ -1,33 +1,37 @@
 #pragma once
 #include <jni.h>
-#include <string>
 
-struct Vector3 {
-    double x, y, z;
-    Vector3 operator+(const Vector3& other) const { return { x + other.x, y + other.y, z + other.z }; }
-    Vector3 operator-(const Vector3& other) const { return { x - other.x, y - other.y, z - other.z }; }
-    double Distance(const Vector3& other) const { return sqrt(pow(x - other.x, 2) + pow(y - other.y, 2) + pow(z - other.z, 2)); }
-};
+#define MC_CLASS_MINECRAFT "net/minecraft/class_310"
+#define MC_CLASS_CLIENTPLAYERENTITY "net/minecraft/class_746"
+#define MC_CLASS_ENTITY "net/minecraft/class_1297"
+#define MC_CLASS_WORLD "net/minecraft/class_638"
+#define MC_CLASS_GAMERENDERER "net/minecraft/class_757"
+#define MC_CLASS_MATRIX4F "net/minecraft/class_1158"
 
-struct Vector2 { float x, y; };
+#define MC_FIELD_PLAYER "field_1724"
+#define MC_FIELD_WORLD "field_1687"
+#define MC_FIELD_YAW "field_6014"
+#define MC_FIELD_PITCH "field_5961"
+#define MC_FIELD_HEALTH "field_6008"
+#define MC_FIELD_POS_X "field_6011"
+#define MC_FIELD_POS_Y "field_6012"
+#define MC_FIELD_POS_Z "field_6013"
+#define MC_FIELD_BOUNDINGBOX "field_5983"
 
-struct Matrix4x4 { float m[4][4]; };
+#define MC_METHOD_GETINSTANCE "method_1551"
+#define MC_METHOD_GETENTITIES "method_18112"
+#define MC_METHOD_GETPROJECTIONMATRIX "method_31931"
+#define MC_METHOD_GETMODELVIEWMATRIX "method_31932"
 
-namespace Offsets {
-    extern const char* MINECRAFT_CLIENT_CLASS;
-    extern const char* GET_INSTANCE_METHOD;
-    extern const char* PLAYER_FIELD;
-    extern const char* WORLD_FIELD;
-    extern const char* ENTITY_CLASS;
-    extern const char* POS_X_FIELD;
-    extern const char* POS_Y_FIELD;
-    extern const char* POS_Z_FIELD;
-    extern const char* HEALTH_FIELD;
-    extern const char* BOUNDING_BOX_FIELD;
-    extern const char* CLIENT_PLAYER_ENTITY_CLASS;
-    extern const char* YAW_FIELD;
-    extern const char* PITCH_FIELD;
-    extern const char* GAME_RENDERER_CLASS;
+namespace MinecraftOffsets {
+    extern jfieldID g_YawFieldID;
+    extern jfieldID g_PitchFieldID;
+    extern jfieldID g_PosXFieldID;
+    extern jfieldID g_PosYFieldID;
+    extern jfieldID g_PosZFieldID;
+    extern jfieldID g_HealthFieldID;
+    extern jfieldID g_BoundingBoxFieldID;
 
-    void InitializeOffsets(JNIEnv* env);
+    bool Initialize(JNIEnv* env);
+    void Cleanup(JNIEnv* env);
 }

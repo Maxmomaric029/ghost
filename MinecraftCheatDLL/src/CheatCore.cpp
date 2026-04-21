@@ -2,53 +2,69 @@
 #include "JVMHelper.h"
 #include "MinecraftOffsets.h"
 
-bool CheatCore::Initialize() {
-    if (!JVMHelper::Initialize()) return false;
-    JNIEnv* env = JVMHelper::AttachThreadToJVM();
-    if (!env) return false;
+CheatCore::CheatCore() : m_overlay(nullptr), m_esp(nullptr), m_aimbot(nullptr), m_cache(nullptr), m_running(false), m_env(nullptr), m_minecraftClient(nullptr), m_localPlayer(nullptr), m_world(nullptr) {}
 
-    Offsets::InitializeOffsets(env);
+CheatCore::~CheatCore() { Shutdown(); }
 
-    m_mcWnd = FindWindowW(L"GLFW30", L"Minecraft 1.21.4");
-    if (!m_mcWnd) return false;
+bool CheatCore::Initialize(JNIEnv* env, HWND hGameWnd) {
+    m_env = env;
+    if (!MinecraftOffsets::Initialize(env)) {
+        OutputDebugStringA("[CheatCore] Fallo al inicializar offsets.");
+        return false;
+    }
 
-    if (!m_overlay.Create(m_mcWnd)) return false;
+    m_minecraftClient = env->NewGlobalRef(JVMHelper::GetMinecraftClient(env));
+    if (!m_minecraftClient) return false;
 
-    m_active = true;
+    m_localPlayer = env->NewGlobalRef(JVMHelper::GetLocalPlayer(env, m_minecraftClient));
+    m_world = env->NewGlobalRef(JVMHelper::GetWorld(env, m_minecraftClient));
+
+    m_cache = new EntityCache();
+    m_aimbot = new Aimbot();
+    m_esp = new ESPRenderer();
+    m_overlay = new OverlayWindow();
+
+    if (!m_overlay->Create(hGameWnd)) return false;
+
+    m_running = true;
     return true;
 }
 
 void CheatCore::RunFrame() {
-    if (!m_active) return;
+    if (!m_running) return;
     JNIEnv* env = JVMHelper::AttachThreadToJVM();
     if (!env) return;
 
-    jclass clientClass = JVMHelper::FindClassCached(env, Offsets::MINECRAFT_CLIENT_CLASS);
-    jmethodID getInstance = JVMHelper::GetStaticMethodIDCached(env, clientClass, Offsets::GET_INSTANCE_METHOD, "()Lnet/minecraft/class_310;");
-    jobject mc = env->CallStaticObjectMethod(clientClass, getInstance);
-    jobject player = env->GetObjectField(mc, JVMHelper::GetFieldIDCached(env, clientClass, Offsets::PLAYER_FIELD, "Lnet/minecraft/class_746;"));
-    jobject world = env->GetObjectField(mc, JVMHelper::GetFieldIDCached(env, clientClass, Offsets::WORLD_FIELD, "Lnet/minecraft/class_638;"));
+    m_cache->Update(env, m_world, m_localPlayer);
+    m_aimbot->Run(*m_cache, env, m_localPlayer);
 
-    if (player && world) {
-        m_cache.Update(env, world, player);
-        m_aimbot.Run(m_cache, env, player);
-        
-        m_overlay.Invalidate(); 
-        // Logic for triggering Draw inside OverlayWindow::Render
-        ID2D1HwndRenderTarget* rt = m_overlay.GetRT();
-        if (rt) {
-            rt->BeginDraw();
-            rt->Clear(D2D1::ColorF(0,0,0,0));
-            m_esp.Draw(rt, m_overlay.GetBrush(), m_overlay.GetTextFormat(), m_cache);
-            rt->EndDraw();
-        }
+    if (GetAsyncKeyState(VK_INSERT) & 1) {
+        // Toggle menu logic
     }
 
-    JVMHelper::CheckException(env);
+    m_overlay->Invalidate();
+}
+
+void CheatCore::DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_esp && m_cache) {
+        // In a real implementation, view matrices are passed here
+        ESPRenderer::Draw(rt, brush, textFormat, *m_cache);
+    }
 }
 
 void CheatCore::Shutdown() {
-    m_active = false;
-    m_overlay.Destroy();
-    JVMHelper::Cleanup();
+    m_running = false;
+    if (m_overlay) { m_overlay->Destroy(); delete m_overlay; m_overlay = nullptr; }
+    
+    JNIEnv* env = JVMHelper::AttachThreadToJVM();
+    if (env) {
+        if (m_minecraftClient) env->DeleteGlobalRef(m_minecraftClient);
+        if (m_localPlayer) env->DeleteGlobalRef(m_localPlayer);
+        if (m_world) env->DeleteGlobalRef(m_world);
+    }
+
+    if (m_cache) delete m_cache;
+    if (m_aimbot) delete m_aimbot;
+    if (m_esp) delete m_esp;
 }

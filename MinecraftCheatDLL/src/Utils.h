@@ -1,35 +1,28 @@
 #pragma once
 #include <cmath>
-#include <algorithm>
+
+struct Vector2 { float x, y; };
+struct Vector3 { 
+    double x, y, z; 
+    double Distance(const Vector3& other) const {
+        return sqrt(pow(x - other.x, 2) + pow(y - other.y, 2) + pow(z - other.z, 2));
+    }
+};
+struct Matrix4x4 { float m[4][4]; };
 
 namespace Utils {
-    inline const double PI = 3.14159265358979323846;
+    const double PI = 3.14159265358979323846;
 
-    inline double DegreeToRadian(double degree) {
-        return degree * (PI / 180.0);
-    }
-
-    inline double RadianToDegree(double radian) {
-        return radian * (180.0 / PI);
-    }
-
-    inline float Clamp(float n, float lower, float upper) {
-        return std::max(lower, std::min(n, upper));
-    }
-
+    inline float ToDegrees(float rad) { return rad * (float)(180.0 / PI); }
+    inline float ToRadians(float deg) { return deg * (float)(PI / 180.0); }
+    inline double RadianToDegree(double rad) { return rad * (180.0 / PI); }
+    
     inline float Lerp(float delta, float start, float end) {
         return start + delta * (end - start);
     }
 
-    inline float NormalizeYaw(float yaw) {
-        while (yaw > 180.0f) yaw -= 360.0f;
-        while (yaw < -180.0f) yaw += 360.0f;
-        return yaw;
-    }
-
-    inline float NormalizePitch(float pitch) {
-        if (pitch > 90.0f) pitch = 90.0f;
-        if (pitch < -90.0f) pitch = -90.0f;
-        return pitch;
+    inline float AngleDiff(float a, float b) {
+        float diff = fmod(b - a + 180, 360) - 180;
+        return diff < -180 ? diff + 360 : diff;
     }
 }

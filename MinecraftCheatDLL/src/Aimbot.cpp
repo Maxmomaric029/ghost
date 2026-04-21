@@ -1,39 +1,62 @@
 #include "Aimbot.h"
+#include "MinecraftOffsets.h"
+#include "Utils.h"
 #include <cmath>
 
 Aimbot::Aimbot() {}
 
-void Aimbot::Run(const EntityCache& cache, JNIEnv* env, jobject localPlayer) {
-    if (!GetAsyncKeyState(VK_LBUTTON)) return;
+void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject localPlayer) {
+    if (!(GetAsyncKeyState(VK_LBUTTON) || GetAsyncKeyState(VK_RBUTTON))) return;
 
+    auto entities = cache.GetEntities();
     const CachedEntity* bestTarget = nullptr;
     float bestFov = m_fov;
 
-    jclass entityClass = JVMHelper::FindClassCached(env, Offsets::ENTITY_CLASS);
-    jfieldID xFid = env->GetFieldID(entityClass, Offsets::POS_X_FIELD, "D");
-    jfieldID yFid = env->GetFieldID(entityClass, Offsets::POS_Y_FIELD, "D");
-    jfieldID zFid = env->GetFieldID(entityClass, Offsets::POS_Z_FIELD, "D");
+    Vector3 lpPos = { 
+        env->GetDoubleField(localPlayer, MinecraftOffsets::g_PosXFieldID),
+        env->GetDoubleField(localPlayer, MinecraftOffsets::g_PosYFieldID),
+        env->GetDoubleField(localPlayer, MinecraftOffsets::g_PosZFieldID)
+    };
 
-    Vector3 lpPos = { env->GetDoubleField(localPlayer, xFid), env->GetDoubleField(localPlayer, yFid), env->GetDoubleField(localPlayer, zFid) };
+    float currentYaw = env->GetFloatField(localPlayer, MinecraftOffsets::g_YawFieldID);
+    float currentPitch = env->GetFloatField(localPlayer, MinecraftOffsets::g_PitchFieldID);
 
-    for (const auto& entity : cache.GetEntities()) {
+    for (const auto& entity : entities) {
+        if (entity.health <= 0) continue;
+        
         float dist = (float)lpPos.Distance(entity.position);
         if (dist > m_range) continue;
 
-        // Calculate angles and FOV check
-        bestTarget = &entity;
+        Vector3 targetPos = entity.headPos;
+        double diffX = targetPos.x - lpPos.x;
+        double diffY = targetPos.y - (lpPos.y + 1.62); // Eye height
+        double diffZ = targetPos.z - lpPos.z;
+        double diffXZ = sqrt(diffX * diffX + diffZ * diffZ);
+
+        float targetYaw = (float)Utils::RadianToDegree(atan2(diffZ, diffX)) - 90.0f;
+        float targetPitch = (float)-Utils::RadianToDegree(atan2(diffY, diffXZ));
+
+        float fov = abs(Utils::AngleDiff(currentYaw, targetYaw)) + abs(Utils::AngleDiff(currentPitch, targetPitch));
+        if (fov < bestFov) {
+            bestFov = fov;
+            bestTarget = &entity;
+        }
     }
 
     if (bestTarget) {
-        jclass lpClass = JVMHelper::FindClassCached(env, Offsets::CLIENT_PLAYER_ENTITY_CLASS);
-        jfieldID yawFid = env->GetFieldID(lpClass, Offsets::YAW_FIELD, "F");
-        jfieldID pitchFid = env->GetFieldID(lpClass, Offsets::PITCH_FIELD, "F");
+        Vector3 targetPos = bestTarget->headPos;
+        double diffX = targetPos.x - lpPos.x;
+        double diffY = targetPos.y - (lpPos.y + 1.62);
+        double diffZ = targetPos.z - lpPos.z;
+        double diffXZ = sqrt(diffX * diffX + diffZ * diffZ);
 
-        float currentYaw = env->GetFloatField(localPlayer, yawFid);
-        float currentPitch = env->GetFloatField(localPlayer, pitchFid);
+        float targetYaw = (float)Utils::RadianToDegree(atan2(diffZ, diffX)) - 90.0f;
+        float targetPitch = (float)-Utils::RadianToDegree(atan2(diffY, diffXZ));
 
-        // Smooth rotation logic
-        float newYaw = currentYaw + 1.0f; // Placeholder for calculated target angle
-        env->SetFloatField(localPlayer, yawFid, newYaw);
+        float smoothYaw = Utils::Lerp(m_smooth, currentYaw, targetYaw);
+        float smoothPitch = Utils::Lerp(m_smooth, currentPitch, targetPitch);
+
+        env->SetFloatField(localPlayer, MinecraftOffsets::g_YawFieldID, smoothYaw);
+        env->SetFloatField(localPlayer, MinecraftOffsets::g_PitchFieldID, smoothPitch);
     }
 }
