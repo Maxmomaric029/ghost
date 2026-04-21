@@ -22,7 +22,7 @@ namespace Utils {
     }
 
     inline float AngleDiff(float a, float b) {
-        float diff = fmod(b - a + 180, 360) - 180;
-        return diff < -180 ? diff + 360 : diff;
+        float diff = fmodf(b - a + 180.0f, 360.0f) - 180.0f;
+        return diff < -180.0f ? diff + 360.0f : diff;
     }
 }

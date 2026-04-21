@@ -1,6 +1,7 @@
 #include "JVMHelper.h"
 #include "MinecraftOffsets.h"
 #include <iostream>
+#include <cstring>
 
 JavaVM* JVMHelper::m_vm = nullptr;
 std::unordered_map<std::string, jclass> JVMHelper::m_classCache;

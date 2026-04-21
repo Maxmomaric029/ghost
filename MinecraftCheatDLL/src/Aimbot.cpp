@@ -1,6 +1,11 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
 #include "Aimbot.h"
 #include "MinecraftOffsets.h"
 #include "Utils.h"
+#include "JVMHelper.h"
 #include <cmath>
 
 Aimbot::Aimbot() {}
