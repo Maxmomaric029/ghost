@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "cheatmod",
+  "version": "${version}",
+  "name": "CheatMod",
+  "description": "ESP y Aimbot para Minecraft 1.21.4",
+  "authors": ["Antigravity AI"],
+  "contact": {},
+  "license": "Propietario",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.ejemplo.cheatmod.CheatMod"]
+  },
+  "mixins": [
+    "mixins.cheatmod.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.4",
+    "java": ">=21"
+  }
+}

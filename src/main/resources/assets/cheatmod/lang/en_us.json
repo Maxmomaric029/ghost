@@ -1,0 +1,8 @@
+{
+  "module.esp.name": "ESP",
+  "module.esp.desc": "Renderiza cajas alrededor de entidades.",
+  "module.killaura.name": "KillAura",
+  "module.killaura.desc": "Ataca automáticamente a entidades cercanas.",
+  "module.bowaimbot.name": "Bow Aimbot",
+  "module.bowaimbot.desc": "Apunta automáticamente con el arco."
+}
