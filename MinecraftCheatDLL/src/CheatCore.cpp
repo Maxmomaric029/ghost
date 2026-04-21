@@ -63,6 +63,10 @@ void CheatCore::OnMouseClick(float mx, float my) {
     if (mx > 100 && mx < 400 && my > 200 && my < 230) m_espEnabled = !m_espEnabled;
 }
 
+void CheatCore::Run() {
+    RunFrame();
+}
+
 void CheatCore::RunFrame() {
     if (!m_running) return;
     HandleInput();
