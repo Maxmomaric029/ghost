@@ -23,9 +23,9 @@ void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
         m_entities.clear();
     }
 
-    jclass worldClass = JVMHelper::GetClass(env, Offsets::CLASS_WORLD);
+    jclass worldClass = JVMHelper::GetClass(env, MinecraftOffsets::CLASS_WORLD);
     if (!worldClass) return;
-    jmethodID getEntities = env->GetMethodID(worldClass, Offsets::METHOD_GET_ENTITIES, "()Ljava/lang/Iterable;");
+    jmethodID getEntities = env->GetMethodID(worldClass, MinecraftOffsets::METHOD_GET_ENTITIES, "()Ljava/lang/Iterable;");
     if (!getEntities) return;
     
     jobject iterable = env->CallObjectMethod(world, getEntities);

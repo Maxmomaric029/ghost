@@ -79,22 +79,22 @@ namespace JVMHelper {
     }
 
     jobject GetMinecraftClient(JNIEnv* env) {
-        jclass clientClass = GetClass(env, Offsets::CLASS_MINECRAFT);
+        jclass clientClass = GetClass(env, MinecraftOffsets::CLASS_MINECRAFT);
         if (!clientClass) return nullptr;
-        jmethodID getInstance = env->GetStaticMethodID(clientClass, Offsets::METHOD_GET_INSTANCE, "()L" "net/minecraft/client/Minecraft" ";");
+        jmethodID getInstance = env->GetStaticMethodID(clientClass, MinecraftOffsets::METHOD_GET_INSTANCE, "()L" "net/minecraft/client/Minecraft" ";");
         if (!getInstance) return nullptr;
         return env->CallStaticObjectMethod(clientClass, getInstance);
     }
 
     jobject GetLocalPlayer(JNIEnv* env, jobject client) {
-        jclass clientClass = GetClass(env, Offsets::CLASS_MINECRAFT);
-        jfieldID playerField = GetField(env, clientClass, Offsets::FIELD_PLAYER, "L" "net/minecraft/client/player/LocalPlayer" ";");
+        jclass clientClass = GetClass(env, MinecraftOffsets::CLASS_MINECRAFT);
+        jfieldID playerField = GetField(env, clientClass, MinecraftOffsets::FIELD_PLAYER, "L" "net/minecraft/client/player/LocalPlayer" ";");
         return env->GetObjectField(client, playerField);
     }
 
     jobject GetWorld(JNIEnv* env, jobject client) {
-        jclass clientClass = GetClass(env, Offsets::CLASS_MINECRAFT);
-        jfieldID worldField = GetField(env, clientClass, Offsets::FIELD_LEVEL, "L" "net/minecraft/client/multiplayer/ClientLevel" ";");
+        jclass clientClass = GetClass(env, MinecraftOffsets::CLASS_MINECRAFT);
+        jfieldID worldField = GetField(env, clientClass, MinecraftOffsets::FIELD_LEVEL, "L" "net/minecraft/client/multiplayer/ClientLevel" ";");
         return env->GetObjectField(client, worldField);
     }
 

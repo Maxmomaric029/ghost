@@ -10,7 +10,7 @@ bool CheatCore::Initialize(HWND hGameWnd) {
     m_env = JVMHelper::GetEnv();
     if (!m_env) return false;
 
-    if (!Offsets::Initialize(m_env)) {
+    if (!MinecraftOffsets::Initialize(m_env)) {
         OutputDebugStringA("[CheatCore] Fallo al inicializar offsets.");
         return false;
     }
