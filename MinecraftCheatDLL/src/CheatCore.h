@@ -18,15 +18,17 @@ public:
     void Shutdown();
     void DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat);
     
-    // Gestión del Menú
     void HandleInput();
+    void OnMouseClick(float mx, float my); // Nueva función para procesar clicks
     bool IsMenuVisible() const { return m_menuVisible; }
     
     bool IsRunning() const { return m_running; }
     
-    // Estados de módulos para el menú
     bool& GetAimbotEnabled() { return m_aimbotEnabled; }
     bool& GetESPEnabled() { return m_espEnabled; }
+
+    const Matrix4x4& GetViewMatrix() const { return m_modelViewMatrix; }
+    const Matrix4x4& GetProjMatrix() const { return m_projectionMatrix; }
 
 private:
     CheatCore();
@@ -41,9 +43,12 @@ private:
     std::atomic<bool> m_menuVisible;
     bool m_insertWasDown = false;
     
-    // Toggles de módulos
     bool m_aimbotEnabled = true;
     bool m_espEnabled = true;
+
+    // Matrices reales de Minecraft
+    Matrix4x4 m_modelViewMatrix;
+    Matrix4x4 m_projectionMatrix;
 
     JNIEnv* m_env;
     jobject m_minecraftClient;

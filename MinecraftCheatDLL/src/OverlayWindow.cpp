@@ -40,6 +40,9 @@ void OverlayWindow::SetClickThrough(bool enabled) {
     if (enabled) style |= WS_EX_TRANSPARENT;
     else style &= ~WS_EX_TRANSPARENT;
     SetWindowLong(m_hWnd, GWL_EXSTYLE, style);
+    
+    // Traer al frente si el menú está abierto
+    if (!enabled) SetForegroundWindow(m_hWnd);
 }
 
 void OverlayWindow::Run() {
@@ -99,60 +102,53 @@ void OverlayWindow::DrawMenu(ID2D1RenderTarget* rt) {
     float x = (size.width - w) / 2.0f;
     float y = (size.height - h) / 2.0f;
 
-    // Fondo del Menú (Dark Premium)
     m_pBrush->SetColor(D2D1::ColorF(0.08f, 0.08f, 0.1f, 0.95f));
     rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, y, x + w, y + h), 12.0f, 12.0f), m_pBrush);
     
-    // Borde brillante con degradado (simulado con color fijo para velocidad)
     m_pBrush->SetColor(D2D1::ColorF(0.4f, 0.3f, 1.0f, 1.0f));
     rt->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, y, x + w, y + h), 12.0f, 12.0f), m_pBrush, 2.5f);
 
-    // Cabecera
     m_pBrush->SetColor(D2D1::ColorF(0.15f, 0.15f, 0.2f, 1.0f));
     rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, y, x + w, y + 60), 12.0f, 12.0f), m_pBrush);
     
     m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
     rt->DrawTextW(L"ANTIGRAVITY GHOST", 18, m_pTextFormat, D2D1::RectF(x + 20, y + 20, x + w, y + 60), m_pBrush);
 
-    // Toggles
     DrawToggle(rt, x + 30, y + 80, L"Aimbot (Auto-Aim)", CheatCore::Instance().GetAimbotEnabled());
     DrawToggle(rt, x + 30, y + 130, L"ESP (Visual Box)", CheatCore::Instance().GetESPEnabled());
-    
-    m_pBrush->SetColor(D2D1::ColorF(0.5f, 0.5f, 0.5f, 1.0f));
-    rt->DrawTextW(L"Presiona INSERT para ocultar", 28, m_pTextFormat, D2D1::RectF(x + 30, y + h - 40, x + w, y + h), m_pBrush);
 }
 
 void OverlayWindow::DrawToggle(ID2D1RenderTarget* rt, float x, float y, const wchar_t* label, bool enabled) {
     float toggleWidth = 40.0f;
     float toggleHeight = 20.0f;
-
-    // Etiqueta
     m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
     rt->DrawTextW(label, (UINT32)wcslen(label), m_pTextFormat, D2D1::RectF(x, y, x + 250, y + 30), m_pBrush);
-
-    // Fondo Toggle
     if (enabled) m_pBrush->SetColor(D2D1::ColorF(0.3f, 0.7f, 0.3f, 1.0f));
     else m_pBrush->SetColor(D2D1::ColorF(0.3f, 0.3f, 0.3f, 1.0f));
-    
     rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x + 260, y, x + 260 + toggleWidth, y + toggleHeight), 10.0f, 10.0f), m_pBrush);
-    
-    // Círculo Toggle
     m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
     float circleX = enabled ? (x + 260 + toggleWidth - 10) : (x + 260 + 10);
     rt->FillEllipse(D2D1::Ellipse(D2D1::Point2F(circleX, y + 10), 8, 8), m_pBrush);
 }
 
 LRESULT CALLBACK OverlayWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    OverlayWindow* pThis = nullptr;
+    OverlayWindow* pThis = (OverlayWindow*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
     if (msg == WM_NCCREATE) {
         pThis = (OverlayWindow*)((LPCREATESTRUCT)lParam)->lpCreateParams;
         SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)pThis);
-    } else {
-        pThis = (OverlayWindow*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
     }
 
     if (pThis) {
         switch (msg) {
+            case WM_LBUTTONDOWN: {
+                // CORRECCIÓN: Interceptando clics para el menú
+                if (CheatCore::Instance().IsMenuVisible()) {
+                    float mx = (float)LOWORD(lParam);
+                    float my = (float)HIWORD(lParam);
+                    CheatCore::Instance().OnMouseClick(mx, my);
+                }
+                return 0;
+            }
             case WM_PAINT: pThis->OnPaint(); return 0;
             case WM_ERASEBKGND: return 1;
             case WM_NCHITTEST: 

@@ -8,11 +8,16 @@ namespace MinecraftOffsets {
     inline const char* CLASS_WORLD = "net/minecraft/client/multiplayer/ClientLevel";
     inline const char* CLASS_ENTITY = "net/minecraft/world/entity/Entity";
     inline const char* CLASS_LIVING = "net/minecraft/world/entity/LivingEntity";
+    inline const char* CLASS_GAMERENDERER = "net/minecraft/client/renderer/GameRenderer";
     
     // Campos
     inline const char* FIELD_MINECRAFT_INSTANCE = "instance";
     inline const char* FIELD_PLAYER = "player";
     inline const char* FIELD_LEVEL = "level";
+    inline const char* FIELD_GAMERENDERER = "gameRenderer";
+    inline const char* FIELD_PROJ_MATRIX = "projectionMatrix";
+    inline const char* FIELD_MV_MATRIX = "modelViewMatrix";
+    
     inline const char* FIELD_POS_X = "x";
     inline const char* FIELD_POS_Y = "y";
     inline const char* FIELD_POS_Z = "z";
@@ -31,6 +36,9 @@ namespace MinecraftOffsets {
     extern jfieldID g_PosYFieldID;
     extern jfieldID g_PosZFieldID;
     extern jfieldID g_HealthFieldID;
+    extern jfieldID g_GameRendererFieldID;
+    extern jfieldID g_ProjMatrixFieldID;
+    extern jfieldID g_MVMatrixFieldID;
 
     bool Initialize(JNIEnv* env);
 }
