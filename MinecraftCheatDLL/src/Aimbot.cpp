@@ -1,67 +1,74 @@
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
 #include "Aimbot.h"
+#include "JVMHelper.h"
 #include "MinecraftOffsets.h"
 #include "Utils.h"
-#include "JVMHelper.h"
-#include <cmath>
 
-Aimbot::Aimbot() {}
+Aimbot::Aimbot() : m_smooth(0.15f), m_fov(45.0f), m_range(6.0f) {}
 
-void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject localPlayer) {
-    if (!(GetAsyncKeyState(VK_LBUTTON) || GetAsyncKeyState(VK_RBUTTON))) return;
+/**
+ * Lógica principal del Aimbot.
+ * Corrige el latigazo mediante normalización angular y Lerp circular.
+ */
+void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject player) {
+    if (!GetAsyncKeyState(VK_LBUTTON)) return;
+
+    jclass playerClass = env->GetObjectClass(player);
+    ScopedLocalRef slrPlayerClass(env, playerClass);
+
+    // Obtener rotaciones y posición actuales
+    float currentYaw = env->GetFloatField(player, env->GetFieldID(playerClass, Offsets::FIELD_YAW, "F"));
+    float currentPitch = env->GetFloatField(player, env->GetFieldID(playerClass, Offsets::FIELD_PITCH, "F"));
+
+    Vector3 lpPos;
+    lpPos.x = env->GetDoubleField(player, env->GetFieldID(playerClass, Offsets::FIELD_POS_X, "D"));
+    lpPos.y = env->GetDoubleField(player, env->GetFieldID(playerClass, Offsets::FIELD_POS_Y, "D"));
+    lpPos.z = env->GetDoubleField(player, env->GetFieldID(playerClass, Offsets::FIELD_POS_Z, "D"));
 
     auto entities = cache.GetEntities();
-    const CachedEntity* bestTarget = nullptr;
-    float bestFov = m_fov;
-
-    Vector3 lpPos = { 
-        env->GetDoubleField(localPlayer, MinecraftOffsets::g_PosXFieldID),
-        env->GetDoubleField(localPlayer, MinecraftOffsets::g_PosYFieldID),
-        env->GetDoubleField(localPlayer, MinecraftOffsets::g_PosZFieldID)
-    };
-
-    float currentYaw = env->GetFloatField(localPlayer, MinecraftOffsets::g_YawFieldID);
-    float currentPitch = env->GetFloatField(localPlayer, MinecraftOffsets::g_PitchFieldID);
+    const CachedData* bestTarget = nullptr;
+    float minFov = m_fov;
 
     for (const auto& entity : entities) {
-        if (entity.health <= 0) continue;
-        
-        float dist = (float)lpPos.Distance(entity.position);
+        if (entity.health <= 0.0f) continue;
+
+        float dist = (float)lpPos.Distance(entity.pos);
         if (dist > m_range) continue;
 
-        Vector3 targetPos = entity.headPos;
-        double diffX = targetPos.x - lpPos.x;
-        double diffY = targetPos.y - (lpPos.y + 1.62); // Eye height
-        double diffZ = targetPos.z - lpPos.z;
+        // Calcular ángulos necesarios
+        double diffX = entity.pos.x - lpPos.x;
+        double diffY = (entity.pos.y + 1.2) - (lpPos.y + 1.62); // Altura de ojos aprox
+        double diffZ = entity.pos.z - lpPos.z;
         double diffXZ = sqrt(diffX * diffX + diffZ * diffZ);
 
         float targetYaw = (float)Utils::RadianToDegree(atan2(diffZ, diffX)) - 90.0f;
         float targetPitch = (float)-Utils::RadianToDegree(atan2(diffY, diffXZ));
 
-        float fov = abs(Utils::AngleDiff(currentYaw, targetYaw)) + abs(Utils::AngleDiff(currentPitch, targetPitch));
-        if (fov < bestFov) {
-            bestFov = fov;
+        // Diferencia angular normalizada para evitar rotaciones bruscas
+        float fovYaw = abs(Utils::AngleDiff(currentYaw, targetYaw));
+        float fovPitch = abs(Utils::AngleDiff(currentPitch, targetPitch));
+
+        if (fovYaw + fovPitch < minFov) {
+            minFov = fovYaw + fovPitch;
             bestTarget = &entity;
         }
     }
 
     if (bestTarget) {
-        Vector3 targetPos = bestTarget->headPos;
-        double diffX = targetPos.x - lpPos.x;
-        double diffY = targetPos.y - (lpPos.y + 1.62);
-        double diffZ = targetPos.z - lpPos.z;
+        // Recalcular para el objetivo seleccionado
+        double diffX = bestTarget->pos.x - lpPos.x;
+        double diffY = (bestTarget->pos.y + 1.2) - (lpPos.y + 1.62);
+        double diffZ = bestTarget->pos.z - lpPos.z;
         double diffXZ = sqrt(diffX * diffX + diffZ * diffZ);
 
         float targetYaw = (float)Utils::RadianToDegree(atan2(diffZ, diffX)) - 90.0f;
         float targetPitch = (float)-Utils::RadianToDegree(atan2(diffY, diffXZ));
 
-        float smoothYaw = Utils::Lerp(m_smooth, currentYaw, targetYaw);
-        float smoothPitch = Utils::Lerp(m_smooth, currentPitch, targetPitch);
+        // CORRECCIÓN: Suavizado aplicado sobre diferencia angular normalizada
+        float newYaw = Utils::Lerp(m_smooth, currentYaw, targetYaw);
+        float newPitch = Utils::Lerp(m_smooth, currentPitch, targetPitch);
 
-        env->SetFloatField(localPlayer, MinecraftOffsets::g_YawFieldID, smoothYaw);
-        env->SetFloatField(localPlayer, MinecraftOffsets::g_PitchFieldID, smoothPitch);
+        // Actualizar en la JVM
+        env->SetFloatField(player, env->GetFieldID(playerClass, Offsets::FIELD_YAW, "F"), newYaw);
+        env->SetFloatField(player, env->GetFieldID(playerClass, Offsets::FIELD_PITCH, "F"), newPitch);
     }
 }

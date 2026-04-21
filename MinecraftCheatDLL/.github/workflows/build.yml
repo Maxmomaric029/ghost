@@ -1,4 +1,4 @@
-name: Build DLL x64 Release
+name: Build Ghost Client DLL
 
 on:
   push:
@@ -23,5 +23,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MinecraftCheatDLL
+        name: MinecraftCheatDLL-Release
         path: x64/Release/MinecraftCheatDLL.dll
