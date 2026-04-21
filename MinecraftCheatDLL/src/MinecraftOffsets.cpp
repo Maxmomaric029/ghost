@@ -8,6 +8,8 @@ namespace MinecraftOffsets {
     jfieldID g_PosYFieldID = nullptr;
     jfieldID g_PosZFieldID = nullptr;
     jfieldID g_HealthFieldID = nullptr;
+    jfieldID g_GameRendererFieldID = nullptr;
+    jfieldID g_ProjMatrixFieldID = nullptr;
     jfieldID g_MVMatrixFieldID = nullptr;
     jfieldID g_MatrixFields[16] = { nullptr };
 
