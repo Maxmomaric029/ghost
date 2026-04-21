@@ -6,6 +6,7 @@ namespace JVMHelper {
     static JavaVM* g_jvm = nullptr;
     static std::unordered_map<std::string, jclass> g_classCache;
     static std::unordered_map<std::string, jfieldID> g_fieldCache;
+    static std::unordered_map<std::string, jmethodID> g_methodCache;
     static std::mutex g_cacheMutex;
 
     bool Initialize() {
@@ -27,6 +28,7 @@ namespace JVMHelper {
         }
         g_classCache.clear();
         g_fieldCache.clear();
+        g_methodCache.clear();
     }
 
     JNIEnv* GetEnv() {
@@ -75,26 +77,52 @@ namespace JVMHelper {
     }
 
     jmethodID GetMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig) {
-        return env->GetMethodID(clazz, name, sig);
+        std::lock_guard<std::mutex> lock(g_cacheMutex);
+        std::string key = std::to_string((uintptr_t)clazz) + name + sig;
+        if (g_methodCache.count(key)) return g_methodCache[key];
+
+        jmethodID mid = env->GetMethodID(clazz, name, sig);
+        if (!mid) {
+            std::string msg = "[JVMHelper] No se encontró el método: " + std::string(name);
+            OutputDebugStringA(msg.c_str());
+            return nullptr;
+        }
+        g_methodCache[key] = mid;
+        return mid;
+    }
+
+    jmethodID GetStaticMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig) {
+        std::lock_guard<std::mutex> lock(g_cacheMutex);
+        std::string key = "static" + std::to_string((uintptr_t)clazz) + name + sig;
+        if (g_methodCache.count(key)) return g_methodCache[key];
+
+        jmethodID mid = env->GetStaticMethodID(clazz, name, sig);
+        if (!mid) {
+            std::string msg = "[JVMHelper] No se encontró el método estático: " + std::string(name);
+            OutputDebugStringA(msg.c_str());
+            return nullptr;
+        }
+        g_methodCache[key] = mid;
+        return mid;
     }
 
     jobject GetMinecraftClient(JNIEnv* env) {
         jclass clientClass = GetClass(env, MinecraftOffsets::CLASS_MINECRAFT);
         if (!clientClass) return nullptr;
-        jmethodID getInstance = env->GetStaticMethodID(clientClass, MinecraftOffsets::METHOD_GET_INSTANCE, "()L" "net/minecraft/client/Minecraft" ";");
+        jmethodID getInstance = GetStaticMethod(env, clientClass, MinecraftOffsets::METHOD_GET_INSTANCE, "()L" "net/minecraft/class_310" ";");
         if (!getInstance) return nullptr;
         return env->CallStaticObjectMethod(clientClass, getInstance);
     }
 
     jobject GetLocalPlayer(JNIEnv* env, jobject client) {
         jclass clientClass = GetClass(env, MinecraftOffsets::CLASS_MINECRAFT);
-        jfieldID playerField = GetField(env, clientClass, MinecraftOffsets::FIELD_PLAYER, "L" "net/minecraft/client/player/LocalPlayer" ";");
+        jfieldID playerField = GetField(env, clientClass, MinecraftOffsets::FIELD_PLAYER, "L" "net/minecraft/class_746" ";");
         return env->GetObjectField(client, playerField);
     }
 
     jobject GetWorld(JNIEnv* env, jobject client) {
         jclass clientClass = GetClass(env, MinecraftOffsets::CLASS_MINECRAFT);
-        jfieldID worldField = GetField(env, clientClass, MinecraftOffsets::FIELD_LEVEL, "L" "net/minecraft/client/multiplayer/ClientLevel" ";");
+        jfieldID worldField = GetField(env, clientClass, MinecraftOffsets::FIELD_LEVEL, "L" "net/minecraft/class_638" ";");
         return env->GetObjectField(client, worldField);
     }
 

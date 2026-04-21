@@ -67,18 +67,32 @@ void OverlayWindow::Run() {
     ShowWindow(m_hWnd, SW_SHOW);
 
     MSG msg;
-    while (m_running && GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+    while (m_running) {
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                m_running = false;
+                break;
+            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        if (!m_running) break;
         UpdatePosition();
+        OnPaint(); // Forzar renderizado continuo
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // ~100 FPS
     }
 }
 
 void OverlayWindow::UpdatePosition() {
     if (!m_hTargetWnd || !m_hWnd) return;
-    RECT rect;
-    GetWindowRect(m_hTargetWnd, &rect);
-    SetWindowPos(m_hWnd, HWND_TOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOACTIVATE);
+    
+    RECT clientRect;
+    GetClientRect(m_hTargetWnd, &clientRect); // Área real de juego
+    
+    POINT pt = { 0, 0 };
+    ClientToScreen(m_hTargetWnd, &pt); // Traducir coordenadas de ventana a pantalla
+    
+    SetWindowPos(m_hWnd, HWND_TOPMOST, pt.x, pt.y, clientRect.right, clientRect.bottom, SWP_NOACTIVATE);
 }
 
 void OverlayWindow::OnPaint() {

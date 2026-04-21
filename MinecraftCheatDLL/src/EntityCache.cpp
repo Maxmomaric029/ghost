@@ -25,25 +25,21 @@ void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
 
     jclass worldClass = JVMHelper::GetClass(env, MinecraftOffsets::CLASS_WORLD);
     if (!worldClass) return;
-    jmethodID getEntities = env->GetMethodID(worldClass, MinecraftOffsets::METHOD_GET_ENTITIES, "()Ljava/lang/Iterable;");
+    jmethodID getEntities = JVMHelper::GetMethod(env, worldClass, MinecraftOffsets::METHOD_GET_ENTITIES, "()Ljava/lang/Iterable;");
     if (!getEntities) return;
     
     jobject iterable = env->CallObjectMethod(world, getEntities);
     if (!iterable) return;
     ScopedLocalRef slrIterable(env, iterable);
 
-    jclass iterClass = env->FindClass("java/util/Iterator");
-    jmethodID hasNext = env->GetMethodID(iterClass, "hasNext", "()Z");
-    jmethodID next = env->GetMethodID(iterClass, "next", "()Ljava/lang/Object;");
-
-    jclass iterableInterface = env->FindClass("java/lang/Iterable");
-    jobject iterator = env->CallObjectMethod(iterable, env->GetMethodID(iterableInterface, "iterator", "()Ljava/util/Iterator;"));
+    jobject iterator = env->CallObjectMethod(iterable, MinecraftOffsets::g_IteratorMethodID);
+    if (!iterator) return;
     ScopedLocalRef slrIterator(env, iterator);
 
     std::vector<CachedEntity> tempEntities;
 
-    while (env->CallBooleanMethod(iterator, hasNext)) {
-        jobject entity = env->CallObjectMethod(iterator, next);
+    while (env->CallBooleanMethod(iterator, MinecraftOffsets::g_HasNextMethodID)) {
+        jobject entity = env->CallObjectMethod(iterator, MinecraftOffsets::g_NextMethodID);
         if (!entity) continue;
         
         if (env->IsSameObject(entity, localPlayer)) {

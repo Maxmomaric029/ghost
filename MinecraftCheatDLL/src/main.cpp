@@ -50,7 +50,7 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
             OutputDebugStringA("[GhostClient] Inicialización completada con éxito.");
             
             // Bucle principal de ejecución (60 FPS aprox)
-            while (!GetAsyncKeyState(VK_END)) {
+            while (!(GetAsyncKeyState(VK_END) & 0x8000)) {
                 CheatCore::Instance().Run();
                 Sleep(16);
             }

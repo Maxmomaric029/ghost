@@ -54,6 +54,11 @@ namespace JVMHelper {
     jmethodID GetMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig);
 
     /**
+     * Helper para obtener Static MethodIDs con caché.
+     */
+    jmethodID GetStaticMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig);
+
+    /**
      * Helper para obtener instancias clave de Minecraft.
      */
     jobject GetMinecraftClient(JNIEnv* env);

@@ -7,7 +7,7 @@ struct Vector2 { float x, y; };
 struct Vector3 { 
     double x, y, z; 
     Vector3 operator-(const Vector3& other) const { return { x - other.x, y - other.y, z - other.z }; }
-    double Length() const { return sqrt(x * x + y * y + z * z); }
+    double Length() const { return std::sqrt(x * x + y * y + z * z); }
     double Distance(const Vector3& other) const { return (*this - other).Length(); }
 };
 

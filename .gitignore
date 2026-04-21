@@ -1,0 +1,16 @@
+.gradle/
+build/
+bin/
+.vs/
+*.user
+*.suo
+*.pdb
+*.obj
+*.log
+*.tlog
+*.lastbuildstate
+*.idb
+*.ipch
+*.sdf
+*.opensdf
+*.vcxproj.user

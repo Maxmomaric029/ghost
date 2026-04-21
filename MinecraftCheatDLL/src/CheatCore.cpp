@@ -15,11 +15,22 @@ bool CheatCore::Initialize(HWND hGameWnd) {
         return false;
     }
 
-    m_minecraftClient = m_env->NewGlobalRef(JVMHelper::GetMinecraftClient(m_env));
-    if (!m_minecraftClient) return false;
+    jobject client = JVMHelper::GetMinecraftClient(m_env);
+    if (!client) return false;
+    m_minecraftClient = m_env->NewGlobalRef(client);
+    m_env->DeleteLocalRef(client);
 
-    m_localPlayer = m_env->NewGlobalRef(JVMHelper::GetLocalPlayer(m_env, m_minecraftClient));
-    m_world = m_env->NewGlobalRef(JVMHelper::GetWorld(m_env, m_minecraftClient));
+    jobject localPlayer = JVMHelper::GetLocalPlayer(m_env, m_minecraftClient);
+    if (localPlayer) {
+        m_localPlayer = m_env->NewGlobalRef(localPlayer);
+        m_env->DeleteLocalRef(localPlayer);
+    }
+
+    jobject world = JVMHelper::GetWorld(m_env, m_minecraftClient);
+    if (world) {
+        m_world = m_env->NewGlobalRef(world);
+        m_env->DeleteLocalRef(world);
+    }
 
     m_cache = new EntityCache();
     m_aimbot = new Aimbot();
@@ -34,15 +45,12 @@ bool CheatCore::Initialize(HWND hGameWnd) {
 
 void ReadJOMLMatrix(JNIEnv* env, jobject matrixObj, Matrix4x4& out) {
     if (!matrixObj) return;
-    jclass matClass = env->GetObjectClass(matrixObj);
-    const char* fields[] = { "m00","m01","m02","m03","m10","m11","m12","m13","m20","m21","m22","m23","m30","m31","m32","m33" };
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            jfieldID fid = env->GetFieldID(matClass, fields[i * 4 + j], "F");
-            out.m[i][j] = env->GetFloatField(matrixObj, fid);
+            jfieldID fid = MinecraftOffsets::g_MatrixFields[i * 4 + j];
+            if (fid) out.m[i][j] = env->GetFloatField(matrixObj, fid);
         }
     }
-    env->DeleteLocalRef(matClass);
 }
 
 void CheatCore::HandleInput() {
@@ -74,13 +82,33 @@ void CheatCore::RunFrame() {
     JNIEnv* env = JVMHelper::GetEnv();
     if (!env) return;
 
+    // Actualizar dinámicamente el jugador y el mundo para evitar stale references
+    jobject currentPlayer = JVMHelper::GetLocalPlayer(env, m_minecraftClient);
+    if (!env->IsSameObject(currentPlayer, m_localPlayer)) {
+        if (m_localPlayer) env->DeleteGlobalRef(m_localPlayer);
+        m_localPlayer = currentPlayer ? env->NewGlobalRef(currentPlayer) : nullptr;
+    }
+    if (currentPlayer) env->DeleteLocalRef(currentPlayer);
+
+    jobject currentWorld = JVMHelper::GetWorld(env, m_minecraftClient);
+    if (!env->IsSameObject(currentWorld, m_world)) {
+        if (m_world) env->DeleteGlobalRef(m_world);
+        m_world = currentWorld ? env->NewGlobalRef(currentWorld) : nullptr;
+    }
+    if (currentWorld) env->DeleteLocalRef(currentWorld);
+
+    if (!m_localPlayer || !m_world) return;
+
     jobject gameRenderer = env->GetObjectField(m_minecraftClient, MinecraftOffsets::g_GameRendererFieldID);
     if (gameRenderer) {
         jobject projMatObj = env->GetObjectField(gameRenderer, MinecraftOffsets::g_ProjMatrixFieldID);
         jobject mvMatObj = env->GetObjectField(gameRenderer, MinecraftOffsets::g_MVMatrixFieldID);
         
-        ReadJOMLMatrix(env, projMatObj, m_projectionMatrix);
-        ReadJOMLMatrix(env, mvMatObj, m_modelViewMatrix);
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            ReadJOMLMatrix(env, projMatObj, m_projectionMatrix);
+            ReadJOMLMatrix(env, mvMatObj, m_modelViewMatrix);
+        }
         
         env->DeleteLocalRef(projMatObj);
         env->DeleteLocalRef(mvMatObj);
