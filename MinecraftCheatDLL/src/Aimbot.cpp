@@ -1,4 +1,5 @@
 #include "Aimbot.h"
+#include "CheatCore.h"
 #include "JVMHelper.h"
 #include "MinecraftOffsets.h"
 #include "Utils.h"
