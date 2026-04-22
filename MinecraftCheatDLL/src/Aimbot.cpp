@@ -7,7 +7,7 @@
 Aimbot::Aimbot() : m_smooth(0.15f), m_fov(45.0f), m_range(6.0f) {}
 
 void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject player) {
-    if (!GetAsyncKeyState(VK_LBUTTON)) return;
+    if (!((GetKeyState(VK_LBUTTON) & 0x8000) != 0)) return;
 
     Vector3 lpPos;
     lpPos.x = env->GetDoubleField(player, MinecraftOffsets::g_PosXFieldID);

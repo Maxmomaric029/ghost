@@ -54,7 +54,7 @@ void ReadJOMLMatrix(JNIEnv* env, jobject matrixObj, Matrix4x4& out) {
 }
 
 void CheatCore::HandleInput() {
-    bool insertIsDown = GetAsyncKeyState(VK_INSERT) & 0x8000;
+    bool insertIsDown = (GetKeyState(VK_INSERT) & 0x8000) != 0;
     if (insertIsDown && !m_insertWasDown) {
         m_menuVisible = !m_menuVisible;
         if (m_overlay) m_overlay->SetClickThrough(!m_menuVisible);
@@ -89,9 +89,9 @@ void CheatCore::RunFrame() {
 
     // Actualizar dinámicamente el jugador y el mundo para evitar stale references
     jobject currentPlayer = JVMHelper::GetLocalPlayer(env, m_minecraftClient);
-    if (!env->IsSameObject(currentPlayer, m_localPlayer)) {
+    if (currentPlayer && !env->IsSameObject(currentPlayer, m_localPlayer)) {
         if (m_localPlayer) env->DeleteGlobalRef(m_localPlayer);
-        m_localPlayer = currentPlayer ? env->NewGlobalRef(currentPlayer) : nullptr;
+        m_localPlayer = env->NewGlobalRef(currentPlayer);
     }
     if (currentPlayer) env->DeleteLocalRef(currentPlayer);
 

@@ -54,7 +54,7 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
                 OutputDebugStringA("[GhostClient] Inicialización completada con éxito.");
                 
                 // Bucle principal de ejecución (60 FPS aprox)
-                while (!(GetAsyncKeyState(VK_END) & 0x8000)) {
+                while (!((GetKeyState(VK_END) & 0x8000) != 0)) {
                     CheatCore::Instance().Run();
                     Sleep(16);
                 }
@@ -79,11 +79,12 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
  */
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
-    case DLL_PROCESS_ATTACH:
+    case DLL_PROCESS_ATTACH: {
         DisableThreadLibraryCalls(hModule);
         HANDLE hThread = CreateThread(NULL, 0, CheatMainThread, hModule, 0, NULL);
         if (hThread) CloseHandle(hThread);
         break;
+    }
     }
     return TRUE;
 }
