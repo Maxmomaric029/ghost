@@ -30,6 +30,10 @@ namespace JVMHelper {
         g_fieldCache.clear();
         g_methodCache.clear();
     }
+    
+    JavaVM* GetJVM() {
+        return g_jvm;
+    }
 
     JNIEnv* GetEnv() {
         JNIEnv* env = nullptr;

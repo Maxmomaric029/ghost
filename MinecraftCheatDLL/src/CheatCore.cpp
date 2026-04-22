@@ -62,13 +62,18 @@ void CheatCore::HandleInput() {
     m_insertWasDown = insertIsDown;
 }
 
-void CheatCore::OnMouseClick(float mx, float my) {
+void CheatCore::OnMouseClick(float mx, float my, float winWidth, float winHeight) {
     if (!m_menuVisible) return;
     
-    // El menú es de 350x400 y está centrado.
-    // Lógica de detección simplificada para los botones visuales del menú
-    if (mx > 100 && mx < 400 && my > 150 && my < 180) m_aimbotEnabled = !m_aimbotEnabled;
-    if (mx > 100 && mx < 400 && my > 200 && my < 230) m_espEnabled = !m_espEnabled;
+    // Recalcular la posición exacta del menú basándose en la ventana
+    float w = 350.0f;
+    float h = 400.0f;
+    float x = (winWidth - w) / 2.0f;
+    float y = (winHeight - h) / 2.0f;
+
+    // Calcular hitboxes relativos al menú dinámico
+    if (mx > x + 30 && mx < x + 300 && my > y + 80 && my < y + 110) m_aimbotEnabled = !m_aimbotEnabled;
+    if (mx > x + 30 && mx < x + 300 && my > y + 130 && my < y + 160) m_espEnabled = !m_espEnabled;
 }
 
 void CheatCore::Run() {
@@ -132,13 +137,15 @@ void CheatCore::DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWr
 void CheatCore::Shutdown() {
     m_running = false;
     if (m_overlay) { m_overlay->Destroy(); delete m_overlay; m_overlay = nullptr; }
+    
     JNIEnv* env = JVMHelper::GetEnv();
     if (env) {
-        if (m_minecraftClient) env->DeleteGlobalRef(m_minecraftClient);
-        if (m_localPlayer) env->DeleteGlobalRef(m_localPlayer);
-        if (m_world) env->DeleteGlobalRef(m_world);
+        if (m_minecraftClient) { env->DeleteGlobalRef(m_minecraftClient); m_minecraftClient = nullptr; }
+        if (m_localPlayer)     { env->DeleteGlobalRef(m_localPlayer);     m_localPlayer = nullptr; }
+        if (m_world)           { env->DeleteGlobalRef(m_world);           m_world = nullptr; }
     }
-    if (m_cache) delete m_cache;
-    if (m_aimbot) delete m_aimbot;
-    if (m_esp) delete m_esp;
+    
+    if (m_cache)  { delete m_cache; m_cache = nullptr; }
+    if (m_aimbot) { delete m_aimbot; m_aimbot = nullptr; }
+    if (m_esp)    { delete m_esp; m_esp = nullptr; }
 }

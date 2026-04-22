@@ -46,21 +46,29 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
 
     // Inicialización del motor JNI y Core
     if (JVMHelper::Initialize()) {
-        if (CheatCore::Instance().Initialize(finder.foundHandle)) {
-            OutputDebugStringA("[GhostClient] Inicialización completada con éxito.");
-            
-            // Bucle principal de ejecución (60 FPS aprox)
-            while (!(GetAsyncKeyState(VK_END) & 0x8000)) {
-                CheatCore::Instance().Run();
-                Sleep(16);
+        JavaVM* jvm = JVMHelper::GetJVM();
+        JNIEnv* env;
+        
+        if (jvm->AttachCurrentThread((void**)&env, nullptr) == JNI_OK) {
+            if (CheatCore::Instance().Initialize(finder.foundHandle)) {
+                OutputDebugStringA("[GhostClient] Inicialización completada con éxito.");
+                
+                // Bucle principal de ejecución (60 FPS aprox)
+                while (!(GetAsyncKeyState(VK_END) & 0x8000)) {
+                    CheatCore::Instance().Run();
+                    Sleep(16);
+                }
             }
+            
+            // Limpieza al salir
+            OutputDebugStringA("[GhostClient] Cerrando cheat y liberando recursos.");
+            CheatCore::Instance().Shutdown();
+            JVMHelper::Cleanup();
+            
+            // Desvincular antes de morir para evitar crashes
+            jvm->DetachCurrentThread();
         }
     }
-
-    // Limpieza al salir
-    OutputDebugStringA("[GhostClient] Cerrando cheat y liberando recursos.");
-    CheatCore::Instance().Shutdown();
-    JVMHelper::Cleanup();
 
     FreeLibraryAndExitThread(hModule, 0);
     return 0;

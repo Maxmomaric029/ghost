@@ -155,11 +155,16 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPAR
     if (pThis) {
         switch (msg) {
             case WM_LBUTTONDOWN: {
-                // CORRECCIÓN: Interceptando clics para el menú
                 if (CheatCore::Instance().IsMenuVisible()) {
                     float mx = (float)LOWORD(lParam);
                     float my = (float)HIWORD(lParam);
-                    CheatCore::Instance().OnMouseClick(mx, my);
+                    
+                    RECT rect;
+                    GetClientRect(hWnd, &rect);
+                    float winWidth = (float)(rect.right - rect.left);
+                    float winHeight = (float)(rect.bottom - rect.top);
+                    
+                    CheatCore::Instance().OnMouseClick(mx, my, winWidth, winHeight);
                 }
                 return 0;
             }

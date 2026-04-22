@@ -32,6 +32,11 @@ namespace JVMHelper {
      * Limpia los recursos globales de JNI.
      */
     void Cleanup();
+    
+    /**
+     * Obtiene el puntero a la JavaVM.
+     */
+    JavaVM* GetJVM();
 
     /**
      * Obtiene el JNIEnv asociado al hilo actual, adjuntándolo si es necesario.

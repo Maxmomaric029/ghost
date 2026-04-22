@@ -19,7 +19,7 @@ public:
     void DrawESP(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush, IDWriteTextFormat* textFormat);
     
     void HandleInput();
-    void OnMouseClick(float mx, float my); // Nueva función para procesar clicks
+    void OnMouseClick(float mx, float my, float winWidth, float winHeight); // Nueva función para procesar clicks con dimensiones de ventana
     bool IsMenuVisible() const { return m_menuVisible; }
     
     bool IsRunning() const { return m_running; }
