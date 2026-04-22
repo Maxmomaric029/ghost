@@ -6,7 +6,7 @@
 
 Aimbot::Aimbot() : m_smooth(0.15f), m_fov(45.0f), m_range(6.0f) {}
 
-void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject player) {
+void Aimbot::Run(JNIEnv* env, jobject player) {
     if (!((GetKeyState(VK_LBUTTON) & 0x8000) != 0)) return;
 
     Vector3 lpPos;
@@ -17,7 +17,7 @@ void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject player) {
     float currentYaw = env->GetFloatField(player, MinecraftOffsets::g_YawFieldID);
     float currentPitch = env->GetFloatField(player, MinecraftOffsets::g_PitchFieldID);
 
-    auto entities = cache.GetEntities();
+    auto entities = CheatCore::Instance().GetCache().GetEntities();
     const CachedEntity* bestTarget = nullptr;
     float minFov = m_fov;
 
@@ -45,9 +45,17 @@ void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject player) {
     }
 
     if (bestTarget) {
-        double diffX = bestTarget->pos.x - lpPos.x;
-        double diffY = (bestTarget->pos.y + 1.2) - (lpPos.y + 1.62);
-        double diffZ = bestTarget->pos.z - lpPos.z;
+        // Predecir posición futura (aprox 2 ticks adelante para compensar latencia/ping)
+        float predictionScale = 0.15f; 
+        Vector3 predictedPos = {
+            (double)(bestTarget->pos.x + bestTarget->velocity.x * predictionScale),
+            (double)(bestTarget->pos.y + bestTarget->velocity.y * predictionScale),
+            (double)(bestTarget->pos.z + bestTarget->velocity.z * predictionScale)
+        };
+
+        double diffX = predictedPos.x - lpPos.x;
+        double diffY = (predictedPos.y + 1.2) - (lpPos.y + 1.62);
+        double diffZ = predictedPos.z - lpPos.z;
         double diffXZ = sqrt(diffX * diffX + diffZ * diffZ);
 
         float targetYaw = (float)Utils::RadianToDegree(atan2(diffZ, diffX)) - 90.0f;
@@ -56,7 +64,6 @@ void Aimbot::Run(EntityCache& cache, JNIEnv* env, jobject player) {
         float newYaw = Utils::Lerp(m_smooth, currentYaw, targetYaw);
         float newPitch = Utils::Lerp(m_smooth, currentPitch, targetPitch);
         
-        // CORRECCIÓN: Clamp de Pitch para evitar "cuello roto" o ban
         newPitch = std::clamp(newPitch, -90.0f, 90.0f);
 
         env->SetFloatField(player, MinecraftOffsets::g_YawFieldID, newYaw);

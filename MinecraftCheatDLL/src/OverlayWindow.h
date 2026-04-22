@@ -21,6 +21,7 @@ private:
     void OnPaint();
     void DrawMenu(ID2D1RenderTarget* rt);
     void DrawToggle(ID2D1RenderTarget* rt, float x, float y, const wchar_t* label, bool enabled);
+    void DrawSlider(ID2D1RenderTarget* rt, float x, float y, const wchar_t* label, float& value, float min, float max);
 
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 

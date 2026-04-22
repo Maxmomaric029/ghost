@@ -37,12 +37,15 @@ void OverlayWindow::Invalidate() {
 void OverlayWindow::SetClickThrough(bool enabled) {
     if (!m_hWnd) return;
     LONG style = GetWindowLong(m_hWnd, GWL_EXSTYLE);
-    if (enabled) style |= WS_EX_TRANSPARENT;
-    else style &= ~WS_EX_TRANSPARENT;
+    if (enabled) {
+        style |= WS_EX_TRANSPARENT;
+        style &= ~WS_EX_NOACTIVATE; // permitir que reciba teclas
+    } else {
+        style &= ~WS_EX_TRANSPARENT;
+        SetForegroundWindow(m_hWnd);
+        SetFocus(m_hWnd); // ← asegura que reciba input inmediatamente
+    }
     SetWindowLong(m_hWnd, GWL_EXSTYLE, style);
-    
-    // Traer al frente si el menú está abierto
-    if (!enabled) SetForegroundWindow(m_hWnd);
 }
 
 void OverlayWindow::Run() {
@@ -130,6 +133,12 @@ void OverlayWindow::DrawMenu(ID2D1RenderTarget* rt) {
 
     DrawToggle(rt, x + 30, y + 80, L"Aimbot (Auto-Aim)", CheatCore::Instance().GetAimbotEnabled());
     DrawToggle(rt, x + 30, y + 130, L"ESP (Visual Box)", CheatCore::Instance().GetESPEnabled());
+    
+    Aimbot* aim = CheatCore::Instance().GetAimbot();
+    if (aim) {
+        DrawSlider(rt, x + 30, y + 200, L"Aimbot FOV", aim->m_fov, 0.0f, 180.0f);
+        DrawSlider(rt, x + 30, y + 260, L"Aimbot Smooth", aim->m_smooth, 0.01f, 1.0f);
+    }
 }
 
 void OverlayWindow::DrawToggle(ID2D1RenderTarget* rt, float x, float y, const wchar_t* label, bool enabled) {
@@ -143,6 +152,27 @@ void OverlayWindow::DrawToggle(ID2D1RenderTarget* rt, float x, float y, const wc
     m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
     float circleX = enabled ? (x + 260 + toggleWidth - 10) : (x + 260 + 10);
     rt->FillEllipse(D2D1::Ellipse(D2D1::Point2F(circleX, y + 10), 8, 8), m_pBrush);
+}
+
+void OverlayWindow::DrawSlider(ID2D1RenderTarget* rt, float x, float y, const wchar_t* label, float& value, float min, float max) {
+    float trackW = 200.0f;
+    float t = std::clamp((value - min) / (max - min), 0.0f, 1.0f);
+    
+    // Track
+    m_pBrush->SetColor(D2D1::ColorF(0.2f, 0.2f, 0.2f, 0.8f));
+    rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, y + 12, x + trackW, y + 18), 3, 3), m_pBrush);
+    
+    // Fill
+    m_pBrush->SetColor(D2D1::ColorF(0.4f, 0.3f, 1.0f, 1.0f));
+    rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, y + 12, x + trackW * t, y + 18), 3, 3), m_pBrush);
+    
+    // Knob
+    m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
+    rt->FillEllipse(D2D1::Ellipse(D2D1::Point2F(x + trackW * t, y + 15), 6, 6), m_pBrush);
+    
+    // Label + Valor
+    std::wstring text = std::wstring(label) + L": " + std::to_wstring((int)value);
+    rt->DrawTextW(text.c_str(), (UINT32)text.length(), m_pTextFormat, D2D1::RectF(x, y - 15, x + 300, y + 10), m_pBrush);
 }
 
 LRESULT CALLBACK OverlayWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -165,6 +195,12 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPAR
                     float winHeight = (float)(rect.bottom - rect.top);
                     
                     CheatCore::Instance().OnMouseClick(mx, my, winWidth, winHeight);
+                }
+                return 0;
+            }
+            case WM_KEYDOWN: {
+                if (wParam == VK_INSERT) {
+                    CheatCore::Instance().ToggleMenu();
                 }
                 return 0;
             }

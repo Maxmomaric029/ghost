@@ -7,6 +7,8 @@
 struct CachedEntity {
     jobject entityRef;
     Vector3 pos;
+    Vector3 lastPos;
+    Vector3 velocity;
     Vector3 headPos;
     float health;
     bool isEnemy;

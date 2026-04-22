@@ -37,8 +37,19 @@ bool CheatCore::Initialize(HWND hGameWnd) {
     m_esp = new ESPRenderer();
     m_overlay = new OverlayWindow();
 
+    m_modules.push_back(m_aimbot);
+
     if (!m_overlay->Create(hGameWnd)) return false;
 
+    m_config.Load();
+    m_aimbotEnabled = m_config.aimbot;
+    m_espEnabled = m_config.esp;
+    m_aimbot->enabled = m_aimbotEnabled;
+    m_aimbot->m_fov = m_config.aimbotFov;
+    m_aimbot->m_smooth = m_config.aimbotSmooth;
+    m_aimbot->m_range = m_config.aimbotRange;
+
+    Log(LOG_INFO, "GhostClient Iniciado Correctamente.");
     m_running = true;
     return true;
 }
@@ -54,12 +65,12 @@ void ReadJOMLMatrix(JNIEnv* env, jobject matrixObj, Matrix4x4& out) {
 }
 
 void CheatCore::HandleInput() {
-    bool insertIsDown = (GetKeyState(VK_INSERT) & 0x8000) != 0;
-    if (insertIsDown && !m_insertWasDown) {
-        m_menuVisible = !m_menuVisible;
-        if (m_overlay) m_overlay->SetClickThrough(!m_menuVisible);
-    }
-    m_insertWasDown = insertIsDown;
+    // El input de teclas especiales (INSERT) ahora se maneja vía WM_KEYDOWN en OverlayWindow
+}
+
+void CheatCore::ToggleMenu() {
+    m_menuVisible = !m_menuVisible;
+    if (m_overlay) m_overlay->SetClickThrough(!m_menuVisible);
 }
 
 void CheatCore::OnMouseClick(float mx, float my, float winWidth, float winHeight) {
@@ -71,9 +82,31 @@ void CheatCore::OnMouseClick(float mx, float my, float winWidth, float winHeight
     float x = (winWidth - w) / 2.0f;
     float y = (winHeight - h) / 2.0f;
 
-    // Calcular hitboxes relativos al menú dinámico
-    if (mx > x + 30 && mx < x + 300 && my > y + 80 && my < y + 110) m_aimbotEnabled = !m_aimbotEnabled;
+    // Toggles
+    if (mx > x + 30 && mx < x + 300 && my > y + 80 && my < y + 110) {
+        m_aimbotEnabled = !m_aimbotEnabled;
+        if (m_aimbot) m_aimbot->enabled = m_aimbotEnabled;
+    }
     if (mx > x + 30 && mx < x + 300 && my > y + 130 && my < y + 160) m_espEnabled = !m_espEnabled;
+
+    // Sliders
+    Aimbot* aim = GetAimbot();
+    if (aim) {
+        if (mx > x + 30 && mx < x + 230 && my > y + 190 && my < y + 220) {
+            float t = std::clamp((mx - (x + 30)) / 200.0f, 0.0f, 1.0f);
+            aim->m_fov = t * 180.0f;
+            m_config.aimbotFov = aim->m_fov;
+        }
+        if (mx > x + 30 && mx < x + 230 && my > y + 250 && my < y + 280) {
+            float t = std::clamp((mx - (x + 30)) / 200.0f, 0.0f, 1.0f);
+            aim->m_smooth = 0.01f + t * 0.99f;
+            m_config.aimbotSmooth = aim->m_smooth;
+        }
+    }
+    
+    m_config.aimbot = m_aimbotEnabled;
+    m_config.esp = m_espEnabled;
+    m_config.Save();
 }
 
 void CheatCore::Run() {
@@ -101,6 +134,12 @@ void CheatCore::RunFrame() {
         m_world = currentWorld ? env->NewGlobalRef(currentWorld) : nullptr;
     }
     if (currentWorld) env->DeleteLocalRef(currentWorld);
+    
+    if (m_localPlayer) {
+        m_localPos.x = env->GetDoubleField(m_localPlayer, MinecraftOffsets::g_PosXFieldID);
+        m_localPos.y = env->GetDoubleField(m_localPlayer, MinecraftOffsets::g_PosYFieldID);
+        m_localPos.z = env->GetDoubleField(m_localPlayer, MinecraftOffsets::g_PosZFieldID);
+    }
 
     if (!m_localPlayer || !m_world) return;
 
@@ -121,7 +160,12 @@ void CheatCore::RunFrame() {
     }
 
     m_cache->Update(env, m_world, m_localPlayer);
-    if (m_aimbotEnabled) m_aimbot->Run(*m_cache, env, m_localPlayer);
+    
+    for (auto module : m_modules) {
+        if (module->enabled) {
+            module->Run(env, m_localPlayer);
+        }
+    }
 
     m_overlay->Invalidate();
 }

@@ -15,12 +15,10 @@ EntityCache::~EntityCache() {
 }
 
 void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
+    std::vector<CachedEntity> oldEntities;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (auto& entity : m_entities) {
-            if (entity.entityRef) env->DeleteGlobalRef(entity.entityRef);
-        }
-        m_entities.clear();
+        oldEntities = m_entities;
     }
 
     jclass worldClass = JVMHelper::GetClass(env, MinecraftOffsets::CLASS_WORLD);
@@ -52,14 +50,26 @@ void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
         CachedEntity data;
         data.entityRef = env->NewGlobalRef(entity);
         
-        jclass entClass = env->GetObjectClass(entity);
-        ScopedLocalRef slrEntClass(env, entClass);
-
         data.pos.x = env->GetDoubleField(entity, MinecraftOffsets::g_PosXFieldID);
         data.pos.y = env->GetDoubleField(entity, MinecraftOffsets::g_PosYFieldID);
         data.pos.z = env->GetDoubleField(entity, MinecraftOffsets::g_PosZFieldID);
         data.headPos = { data.pos.x, data.pos.y + 1.62, data.pos.z };
         
+        // Calcular velocidad basada en el frame anterior
+        data.velocity = { 0, 0, 0 };
+        data.lastPos = data.pos;
+        for (const auto& old : oldEntities) {
+            if (env->IsSameObject(entity, old.entityRef)) {
+                data.velocity = { 
+                    (float)(data.pos.x - old.pos.x),
+                    (float)(data.pos.y - old.pos.y),
+                    (float)(data.pos.z - old.pos.z)
+                };
+                data.lastPos = old.pos;
+                break;
+            }
+        }
+
         if (MinecraftOffsets::g_HealthFieldID) {
             data.health = env->GetFloatField(entity, MinecraftOffsets::g_HealthFieldID);
         } else {
@@ -74,6 +84,10 @@ void EntityCache::Update(JNIEnv* env, jobject world, jobject localPlayer) {
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+        // Limpiar referencias antiguas
+        for (auto& old : m_entities) {
+            if (old.entityRef) env->DeleteGlobalRef(old.entityRef);
+        }
         m_entities = tempEntities;
     }
 }
