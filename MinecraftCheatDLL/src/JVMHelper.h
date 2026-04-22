@@ -54,6 +54,11 @@ namespace JVMHelper {
     jfieldID GetField(JNIEnv* env, jclass clazz, const char* name, const char* sig);
 
     /**
+     * Busca una clase de Minecraft.
+     */
+    jclass FindMinecraftClass(JNIEnv* env, const char* name);
+
+    /**
      * Helper para obtener MethodIDs con caché.
      */
     jmethodID GetMethod(JNIEnv* env, jclass clazz, const char* name, const char* sig);

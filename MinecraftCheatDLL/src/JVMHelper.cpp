@@ -48,15 +48,53 @@ namespace JVMHelper {
         return env;
     }
 
+    jclass FindMinecraftClass(JNIEnv* env, const char* name) {
+        jclass threadClass = env->FindClass("java/lang/Thread");
+        jmethodID currentThread = env->GetStaticMethodID(threadClass, "currentThread", "()Ljava/lang/Thread;");
+        jobject thread = env->CallStaticObjectMethod(threadClass, currentThread);
+        
+        jmethodID getContextCL = env->GetMethodID(threadClass, "getContextClassLoader", "()Ljava/lang/ClassLoader;");
+        jobject classLoader = env->CallObjectMethod(thread, getContextCL);
+        
+        jclass clClass = env->FindClass("java/lang/ClassLoader");
+        jmethodID loadClass = env->GetMethodID(clClass, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+        
+        std::string dotName(name);
+        for (char& c : dotName) if (c == '/') c = '.';
+        
+        jstring nameStr = env->NewStringUTF(dotName.c_str());
+        jclass result = (jclass)env->CallObjectMethod(classLoader, loadClass, nameStr);
+        env->DeleteLocalRef(nameStr);
+        
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+            printf("[JVM] ClassLoader no encontro: %s\n", name);
+            return nullptr;
+        }
+        
+        if (!result) {
+            printf("[JVM] loadClass retorno null: %s\n", name);
+            return nullptr;
+        }
+        
+        jclass global = (jclass)env->NewGlobalRef(result);
+        env->DeleteLocalRef(result);
+        return global;
+    }
+
     jclass GetClass(JNIEnv* env, const char* name) {
         std::lock_guard<std::mutex> lock(g_cacheMutex);
         if (g_classCache.count(name)) return g_classCache[name];
 
         jclass local = env->FindClass(name);
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        
         if (!local) {
-            std::string msg = "[JVMHelper] No se encontró la clase: " + std::string(name);
-            OutputDebugStringA(msg.c_str());
-            return nullptr;
+            printf("[JVM] FindClass fallo, intentando con ClassLoader para: %s\n", name);
+            local = FindMinecraftClass(env, name);
+            if (!local) return nullptr;
+            g_classCache[name] = local;
+            return local;
         }
 
         jclass global = (jclass)env->NewGlobalRef(local);
