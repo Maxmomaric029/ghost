@@ -83,11 +83,6 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
     return 0;
 }
 
-    FreeConsole();
-    FreeLibraryAndExitThread(hModule, 0);
-    return 0;
-}
-
 /**
  * Punto de entrada del DLL. Crea el hilo de ejecución para no bloquear el proceso.
  */
