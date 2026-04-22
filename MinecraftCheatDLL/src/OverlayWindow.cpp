@@ -7,6 +7,8 @@
 #pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "dwmapi.lib")
 
+HHOOK OverlayWindow::s_keyboardHook = nullptr;
+
 OverlayWindow::OverlayWindow() : m_hWnd(NULL), m_hTargetWnd(NULL), m_pD2DFactory(NULL), m_pRenderTarget(NULL), m_pBrush(NULL), m_pDWriteFactory(NULL), m_pTextFormat(NULL), m_running(false) {}
 
 OverlayWindow::~OverlayWindow() { Destroy(); }
@@ -20,6 +22,12 @@ bool OverlayWindow::Create(HWND hTarget) {
 
 void OverlayWindow::Destroy() {
     m_running = false;
+    
+    if (s_keyboardHook) {
+        UnhookWindowsHookEx(s_keyboardHook);
+        s_keyboardHook = nullptr;
+    }
+
     if (m_hWnd) PostMessage(m_hWnd, WM_CLOSE, 0, 0);
     if (m_renderThread.joinable()) m_renderThread.join();
     
@@ -66,6 +74,8 @@ void OverlayWindow::Run() {
 
     DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_pDWriteFactory);
     m_pDWriteFactory->CreateTextFormat(L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pTextFormat);
+
+    s_keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
 
     ShowWindow(m_hWnd, SW_SHOW);
 
@@ -218,4 +228,14 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPAR
         }
     }
     return DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+LRESULT CALLBACK OverlayWindow::KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == HC_ACTION && wParam == WM_KEYDOWN) {
+        KBDLLHOOKSTRUCT* kb = (KBDLLHOOKSTRUCT*)lParam;
+        if (kb->vkCode == VK_INSERT) {
+            CheatCore::Instance().ToggleMenu();
+        }
+    }
+    return CallNextHookEx(s_keyboardHook, nCode, wParam, lParam);
 }

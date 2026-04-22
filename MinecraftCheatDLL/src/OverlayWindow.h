@@ -14,8 +14,10 @@ public:
     void Destroy();
     void Invalidate();
     void SetClickThrough(bool enabled);
+    static LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 
 private:
+    static HHOOK s_keyboardHook;
     void Run();
     void UpdatePosition();
     void OnPaint();

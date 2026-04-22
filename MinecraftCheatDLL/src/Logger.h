@@ -16,6 +16,10 @@ inline void Log(LogLevel level, const char* fmt, ...) {
     
     const char* prefix[] = { "[INFO]", "[WARN]", "[ERROR]" };
     std::string msg = std::string(prefix[level]) + " " + buf + "\n";
+    
+    // Imprimir en la consola asignada (AllocConsole)
+    printf("%s", msg.c_str());
+
     OutputDebugStringA(msg.c_str());
     
     // También escribir a archivo para debug

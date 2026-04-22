@@ -31,6 +31,12 @@ BOOL CALLBACK FindMinecraftWindow(HWND hwnd, LPARAM lParam) {
  * Hilo principal del cheat. Gestiona el ciclo de vida y la inyección.
  */
 DWORD WINAPI CheatMainThread(LPVOID lpParam) {
+    AllocConsole();
+    FILE* f;
+    freopen_s(&f, "CONOUT$", "w", stdout);
+    freopen_s(&f, "CONOUT$", "w", stderr);
+    SetConsoleTitleA("Antigravity Ghost - Debug Console");
+
     HMODULE hModule = (HMODULE)lpParam;
     WindowFinder finder = { NULL, L"Minecraft" };
 
@@ -70,6 +76,7 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
         }
     }
 
+    FreeConsole();
     FreeLibraryAndExitThread(hModule, 0);
     return 0;
 }
