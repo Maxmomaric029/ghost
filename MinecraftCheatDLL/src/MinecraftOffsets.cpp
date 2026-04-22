@@ -18,12 +18,17 @@ namespace MinecraftOffsets {
     jmethodID g_IteratorMethodID = nullptr;
 
     bool Initialize(JNIEnv* env) {
+        printf("[Offsets] Buscando: %s\n", CLASS_MINECRAFT);
         jclass clientClass = JVMHelper::GetClass(env, CLASS_MINECRAFT);
-        if (!clientClass) return false;
+        if (!clientClass) { printf("[Offsets] FALLO en CLASS_MINECRAFT\n"); return false; }
+        printf("[Offsets] CLASS_MINECRAFT OK\n");
+
         g_GameRendererFieldID = JVMHelper::GetField(env, clientClass, FIELD_GAMERENDERER, "L" "net/minecraft/class_757" ";");
 
+        printf("[Offsets] Buscando: %s\n", CLASS_ENTITY);
         jclass entityClass = JVMHelper::GetClass(env, CLASS_ENTITY);
-        if (!entityClass) return false;
+        if (!entityClass) { printf("[Offsets] FALLO en CLASS_ENTITY\n"); return false; }
+        printf("[Offsets] CLASS_ENTITY OK\n");
 
         g_YawFieldID = JVMHelper::GetField(env, entityClass, FIELD_YAW, "F");
         g_PitchFieldID = JVMHelper::GetField(env, entityClass, FIELD_PITCH, "F");

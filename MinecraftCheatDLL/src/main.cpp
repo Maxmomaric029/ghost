@@ -36,37 +36,52 @@ DWORD WINAPI CheatMainThread(LPVOID lpParam) {
     freopen_s(&f, "CONOUT$", "w", stdout);
     freopen_s(&f, "CONOUT$", "w", stderr);
     SetConsoleTitleA("Antigravity Ghost - Debug Console");
+    printf("[+] Consola activa\n");
 
     HMODULE hModule = (HMODULE)lpParam;
     WindowFinder finder = { NULL, L"Minecraft" };
 
-    OutputDebugStringA("[GhostClient] Hilo principal iniciado.");
-
-    // Búsqueda robusta de la ventana del juego
+    printf("[*] Buscando ventana de Minecraft...\n");
     while (finder.foundHandle == NULL) {
         EnumWindows(FindMinecraftWindow, (LPARAM)&finder);
-        if (finder.foundHandle == NULL) Sleep(1000);
-    }
-
-    OutputDebugStringA("[GhostClient] Ventana de Minecraft detectada.");
-
-    // Inicialización del motor JNI y Core
-    if (JVMHelper::Initialize()) {
-        if (CheatCore::Instance().Initialize(finder.foundHandle)) {
-            OutputDebugStringA("[GhostClient] Inicialización completada con éxito.");
-            
-            // Bucle principal de ejecución (60 FPS aprox)
-            while (!((GetKeyState(VK_END) & 0x8000) != 0)) {
-                CheatCore::Instance().Run();
-                Sleep(16);
-            }
+        if (finder.foundHandle == NULL) {
+            printf("[*] No encontrada, reintentando...\n");
+            Sleep(1000);
         }
-        
-        // Limpieza al salir
-        OutputDebugStringA("[GhostClient] Cerrando cheat y liberando recursos.");
-        CheatCore::Instance().Shutdown();
-        JVMHelper::Cleanup();
     }
+    printf("[+] Ventana encontrada: %p\n", finder.foundHandle);
+
+    printf("[*] Inicializando JVM...\n");
+    if (!JVMHelper::Initialize()) {
+        printf("[!] JVM FALLO - No se encontro la Virtual Machine activa.\n");
+        Sleep(5000);
+        FreeConsole();
+        FreeLibraryAndExitThread(hModule, 0);
+        return 0;
+    }
+    printf("[+] JVM OK\n");
+
+    printf("[*] Inicializando CheatCore...\n");
+    if (CheatCore::Instance().Initialize(finder.foundHandle)) {
+        printf("[+] CheatCore OK - Ejecutando\n");
+        
+        while (!((GetKeyState(VK_END) & 0x8000) != 0)) {
+            CheatCore::Instance().Run();
+            Sleep(16);
+        }
+    } else {
+        printf("[!] CheatCore FALLO - Revisa los logs arriba para ver que clase u offset fallo.\n");
+        Sleep(10000);
+    }
+
+    printf("[*] Cerrando cheat y liberando recursos...\n");
+    CheatCore::Instance().Shutdown();
+    JVMHelper::Cleanup();
+    
+    FreeConsole();
+    FreeLibraryAndExitThread(hModule, 0);
+    return 0;
+}
 
     FreeConsole();
     FreeLibraryAndExitThread(hModule, 0);

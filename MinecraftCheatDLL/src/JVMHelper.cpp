@@ -11,10 +11,15 @@ namespace JVMHelper {
 
     bool Initialize() {
         jsize count = 0;
-        if (JNI_GetCreatedJavaVMs(&g_jvm, 1, &count) != JNI_OK || count == 0) {
-            OutputDebugStringA("[JVMHelper] No se pudo localizar la Java VM en el proceso.");
+        jint res = JNI_GetCreatedJavaVMs(&g_jvm, 1, &count);
+        printf("[JVM] GetCreatedJavaVMs -> res=%d count=%d\n", res, count);
+        
+        if (res != JNI_OK || count == 0) {
+            printf("[JVM] ERROR: No se pudo localizar la Java VM en el proceso.\n");
             return false;
         }
+        
+        printf("[JVM] JVM Conectada en: %p\n", g_jvm);
         return true;
     }
 

@@ -75,25 +75,20 @@ void OverlayWindow::Run() {
     DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_pDWriteFactory);
     m_pDWriteFactory->CreateTextFormat(L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14.0f, L"en-us", &m_pTextFormat);
 
-    s_keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
+    s_keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, NULL, 0);
+    printf("[Overlay] Hook instalado: %p\n", s_keyboardHook);
+
+    SetTimer(m_hWnd, 1, 10, NULL); // Timer de 10ms para renderizado (~100 FPS)
 
     ShowWindow(m_hWnd, SW_SHOW);
 
     MSG msg;
-    while (m_running) {
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT) {
-                m_running = false;
-                break;
-            }
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        if (!m_running) break;
-        UpdatePosition();
-        OnPaint(); // Forzar renderizado continuo
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // ~100 FPS
+    while (m_running && GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
+    
+    KillTimer(m_hWnd, 1);
 }
 
 void OverlayWindow::UpdatePosition() {
@@ -219,6 +214,12 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPAR
             case WM_NCHITTEST: 
                 if (CheatCore::Instance().IsMenuVisible()) return HTCLIENT;
                 return HTTRANSPARENT;
+            case WM_TIMER:
+                if (wParam == 1) {
+                    pThis->UpdatePosition();
+                    pThis->OnPaint();
+                }
+                return 0;
             case WM_SIZE:
                 if (pThis->m_pRenderTarget) {
                     RECT r; GetClientRect(hWnd, &r);
